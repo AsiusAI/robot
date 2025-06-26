@@ -2,3 +2,6 @@ pyserial
 flask
 odrive
 opencv-python
+torch
+numpy
+rknn-toolkit2
