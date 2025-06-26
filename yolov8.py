@@ -9,7 +9,7 @@ _sep = os.path.sep
 realpath = realpath.split(_sep)
 # sys.path.append(os.path.join(realpath[0]+_sep, *realpath[1:realpath.index('rknn_model_zoo')+1]))
 
-from py_utils.coco_utils import COCO_test_helper
+from rknn_utils.coco_utils import COCO_test_helper
 import numpy as np
 
 
@@ -176,7 +176,7 @@ def setup_model(args):
     model_path = args.model_path
     if model_path.endswith('.rknn'):
         platform = 'rknn'
-        from py_utils.rknn_executor import RKNN_model_container 
+        from rknn_utils.rknn_executor import RKNN_model_container 
         model = RKNN_model_container(args.model_path, args.target, args.device_id)
     else:
         assert False, "{} is not rknn/pytorch/onnx model".format(model_path)
@@ -282,7 +282,7 @@ if __name__ == '__main__':
         pred_json = os.path.join('./', pred_json)
         co_helper.export_to_json(pred_json)
 
-        from py_utils.coco_utils import coco_eval_with_json
+        from rknn_utils.coco_utils import coco_eval_with_json
         coco_eval_with_json(args.anno_json, pred_json)
 
     # release
