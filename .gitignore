@@ -2,3 +2,4 @@
 result/
 *.onnx
 __pycache__/
+.venv/
