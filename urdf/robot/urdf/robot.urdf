@@ -70,14 +70,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="file:///Users/karel/Documents/robot/urdf/robot/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="file:///home/john/robot/urdf/robot/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="file:///Users/karel/Documents/robot/urdf/robot/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="file:///home/john/robot/urdf/robot/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
@@ -90,14 +90,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0.08 -0.09 -0.02"/>
       <geometry>
-        <mesh filename="file:///Users/karel/Documents/robot/urdf/robot/meshes/right_wheel_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="file:///home/john/robot/urdf/robot/meshes/right_wheel_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0.08 -0.09 -0.02"/>
       <geometry>
-        <mesh filename="file:///Users/karel/Documents/robot/urdf/robot/meshes/right_wheel_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="file:///home/john/robot/urdf/robot/meshes/right_wheel_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
@@ -110,14 +110,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="-0.08 -0.09 -0.02"/>
       <geometry>
-        <mesh filename="file:///Users/karel/Documents/robot/urdf/robot/meshes/left_wheel_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="file:///home/john/robot/urdf/robot/meshes/left_wheel_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="-0.08 -0.09 -0.02"/>
       <geometry>
-        <mesh filename="file:///Users/karel/Documents/robot/urdf/robot/meshes/left_wheel_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="file:///home/john/robot/urdf/robot/meshes/left_wheel_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
@@ -130,14 +130,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="-0.0 0.06 -0.045"/>
       <geometry>
-        <mesh filename="file:///Users/karel/Documents/robot/urdf/robot/meshes/lidar_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="file:///home/john/robot/urdf/robot/meshes/lidar_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="-0.0 0.06 -0.045"/>
       <geometry>
-        <mesh filename="file:///Users/karel/Documents/robot/urdf/robot/meshes/lidar_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="file:///home/john/robot/urdf/robot/meshes/lidar_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
@@ -160,4 +160,3 @@
     <axis xyz="0.0 0.0 1.0"/>
   </joint>
 </robot>
-
