@@ -1,0 +1,116 @@
+<?xml version="1.0" ?>
+<robot name="robot">
+
+<!-- Materials -->
+<material name="silver">
+  <color rgba="0.700 0.700 0.700 1.000"/>
+</material>
+
+<!-- Links -->
+<link name="base_link">
+  <inertial>
+    <origin xyz="1.355046717905403e-13 0.009343506444008564 0.019993521445171167" rpy="0 0 0"/>
+    <mass value="1.2850428455001501"/>
+    <inertia ixx="0.004491" iyy="0.002568" izz="0.006705" ixy="0.0" iyz="-2e-06" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://robot/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://robot/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="right_wheel_1">
+  <inertial>
+    <origin xyz="-0.009999999999999995 0.0 0.0" rpy="0 0 0"/>
+    <mass value="0.09349379737083224"/>
+    <inertia ixx="7.5e-05" iyy="4.1e-05" izz="4.1e-05" ixy="-0.0" iyz="0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.08 -0.09 -0.02" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://robot/meshes/right_wheel_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.08 -0.09 -0.02" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://robot/meshes/right_wheel_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="left_wheel_1">
+  <inertial>
+    <origin xyz="0.009999999999999995 0.0 0.0" rpy="0 0 0"/>
+    <mass value="0.09349379737083224"/>
+    <inertia ixx="7.5e-05" iyy="4.1e-05" izz="4.1e-05" ixy="0.0" iyz="0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.08 -0.09 -0.02" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://robot/meshes/left_wheel_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.08 -0.09 -0.02" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://robot/meshes/left_wheel_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="lidar_1">
+  <inertial>
+    <origin xyz="-3.769546289141946e-18 0.0 0.015" rpy="0 0 0"/>
+    <mass value="0.039961058553662165"/>
+    <inertia ixx="7e-06" iyy="7e-06" izz="8e-06" ixy="0.0" iyz="0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.0 0.06 -0.045" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://robot/meshes/lidar_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.0 0.06 -0.045" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://robot/meshes/lidar_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<!-- Joints -->
+<joint name="Revolute 1" type="continuous">
+  <origin xyz="-0.08 0.09 0.02" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="right_wheel_1"/>
+  <axis xyz="-1.0 0.0 0.0"/>
+</joint>
+
+<joint name="Revolute 2" type="continuous">
+  <origin xyz="0.08 0.09 0.02" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="left_wheel_1"/>
+  <axis xyz="1.0 0.0 0.0"/>
+</joint>
+
+<joint name="Revolute 3" type="continuous">
+  <origin xyz="0.0 -0.06 0.045" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="lidar_1"/>
+  <axis xyz="0.0 0.0 1.0"/>
+</joint>
+
+</robot>

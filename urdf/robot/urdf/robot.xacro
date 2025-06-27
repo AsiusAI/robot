@@ -1,9 +1,9 @@
 <?xml version="1.0" ?>
-<robot name="(Unsaved)" xmlns:xacro="http://www.ros.org/wiki/xacro">
+<robot name="robot" xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-<xacro:include filename="$(find (Unsaved)_description)/urdf/materials.xacro" />
-<xacro:include filename="$(find (Unsaved)_description)/urdf/(Unsaved).trans" />
-<xacro:include filename="$(find (Unsaved)_description)/urdf/(Unsaved).gazebo" />
+<xacro:include filename="$(find robot)/urdf/materials.xacro" />
+<xacro:include filename="$(find robot)/urdf/robot.trans" />
+<xacro:include filename="$(find robot)/urdf/robot.gazebo" />
 <link name="base_link">
   <inertial>
     <origin xyz="1.355046717905403e-13 0.009343506444008564 0.019993521445171167" rpy="0 0 0"/>
@@ -13,14 +13,14 @@
   <visual>
     <origin xyz="0 0 0" rpy="0 0 0"/>
     <geometry>
-      <mesh filename="package://(Unsaved)_description/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+      <mesh filename="package://robot/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
     </geometry>
     <material name="silver"/>
   </visual>
   <collision>
     <origin xyz="0 0 0" rpy="0 0 0"/>
     <geometry>
-      <mesh filename="package://(Unsaved)_description/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+      <mesh filename="package://robot/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
     </geometry>
   </collision>
 </link>
@@ -34,14 +34,14 @@
   <visual>
     <origin xyz="0.08 -0.09 -0.02" rpy="0 0 0"/>
     <geometry>
-      <mesh filename="package://(Unsaved)_description/meshes/right_wheel_1.stl" scale="0.001 0.001 0.001"/>
+      <mesh filename="package://robot/meshes/right_wheel_1.stl" scale="0.001 0.001 0.001"/>
     </geometry>
     <material name="silver"/>
   </visual>
   <collision>
     <origin xyz="0.08 -0.09 -0.02" rpy="0 0 0"/>
     <geometry>
-      <mesh filename="package://(Unsaved)_description/meshes/right_wheel_1.stl" scale="0.001 0.001 0.001"/>
+      <mesh filename="package://robot/meshes/right_wheel_1.stl" scale="0.001 0.001 0.001"/>
     </geometry>
   </collision>
 </link>
@@ -55,14 +55,14 @@
   <visual>
     <origin xyz="-0.08 -0.09 -0.02" rpy="0 0 0"/>
     <geometry>
-      <mesh filename="package://(Unsaved)_description/meshes/left_wheel_1.stl" scale="0.001 0.001 0.001"/>
+      <mesh filename="package://robot/meshes/left_wheel_1.stl" scale="0.001 0.001 0.001"/>
     </geometry>
     <material name="silver"/>
   </visual>
   <collision>
     <origin xyz="-0.08 -0.09 -0.02" rpy="0 0 0"/>
     <geometry>
-      <mesh filename="package://(Unsaved)_description/meshes/left_wheel_1.stl" scale="0.001 0.001 0.001"/>
+      <mesh filename="package://robot/meshes/left_wheel_1.stl" scale="0.001 0.001 0.001"/>
     </geometry>
   </collision>
 </link>
@@ -76,14 +76,14 @@
   <visual>
     <origin xyz="-0.0 0.06 -0.045" rpy="0 0 0"/>
     <geometry>
-      <mesh filename="package://(Unsaved)_description/meshes/lidar_1.stl" scale="0.001 0.001 0.001"/>
+      <mesh filename="package://robot/meshes/lidar_1.stl" scale="0.001 0.001 0.001"/>
     </geometry>
     <material name="silver"/>
   </visual>
   <collision>
     <origin xyz="-0.0 0.06 -0.045" rpy="0 0 0"/>
     <geometry>
-      <mesh filename="package://(Unsaved)_description/meshes/lidar_1.stl" scale="0.001 0.001 0.001"/>
+      <mesh filename="package://robot/meshes/lidar_1.stl" scale="0.001 0.001 0.001"/>
     </geometry>
   </collision>
 </link>
