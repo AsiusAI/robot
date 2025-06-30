@@ -86,7 +86,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="file:///Users/karel/Documents/robot/urdf/robot/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="file:///home/john/robot/urdf/robot/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="silver"/>
     </visual>
@@ -202,4 +202,3 @@
     <axis xyz="-1.0 0.0 0.0"/>
   </joint>
 </robot>
-
