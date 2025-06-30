@@ -7,9 +7,9 @@ physicsClient = p.connect(p.GUI)
 
 script_path = os.path.dirname(os.path.abspath(__file__))
 
-robot_description_path = os.path.join(script_path, "urdf", "robot", "urdf")
+robot_path = os.path.join(script_path, "urdf", "robot", "urdf")
 
-p.setAdditionalSearchPath(robot_description_path)
+p.setAdditionalSearchPath(robot_path)
 
 p.setGravity(0, 0, -9.81)
 p.setAdditionalSearchPath(pybullet_data.getDataPath())
@@ -18,7 +18,7 @@ planeId = p.loadURDF("plane.urdf")
 startPos = [0, 0, 0.1]
 startOrientation = p.getQuaternionFromEuler([0, 0, 0])
 
-urdf_file = os.path.join(robot_description_path, "robot.urdf") 
+urdf_file = os.path.join(robot_path, "robot.urdf") 
 
 print(f"Loading URDF from: {urdf_file}")
 
