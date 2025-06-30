@@ -107,12 +107,12 @@ if 'robotId' in locals():
             for key, state in keys.items():
                 if state & p.KEY_WAS_TRIGGERED:
                     if key == ord('w'):  # Forward
-                        left_wheel_velocity = -10
-                        right_wheel_velocity = 10
-                        print("Moving forward")
-                    elif key == ord('s'):  # Backward
                         left_wheel_velocity = 10
                         right_wheel_velocity = -10
+                        print("Moving forward")
+                    elif key == ord('s'):  # Backward
+                        left_wheel_velocity = -10
+                        right_wheel_velocity = 10
                         print("Moving backward")
                     elif key == ord('a'):  # Turn left
                         left_wheel_velocity = -10
