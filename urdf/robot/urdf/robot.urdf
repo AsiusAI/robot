@@ -3,6 +3,9 @@
   <material name="silver">
     <color rgba="0.700 0.700 0.700 1.000"/>
   </material>
+   <material name="blue">
+      <color rgba="0 0 1 1"/>
+   </material>
   <transmission name="Revolute 1_tran">
     <type>transmission_interface/SimpleTransmission</type>
     <joint name="Revolute 1">
@@ -86,14 +89,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="file:///home/john/robot/urdf/robot/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="meshes/base_link.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="file:///home/john/robot/urdf/robot/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="meshes/base_link.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
@@ -106,14 +109,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="-0.005 0.071557 0.0125"/>
       <geometry>
-        <mesh filename="file:///home/john/robot/urdf/robot/meshes/caster_wheel_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="meshes/caster_wheel_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="-0.005 0.071557 0.0125"/>
       <geometry>
-        <mesh filename="file:///home/john/robot/urdf/robot/meshes/caster_wheel_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="meshes/caster_wheel_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
@@ -126,14 +129,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="-0.0 0.08 0.001"/>
       <geometry>
-        <mesh filename="file:///home/john/robot/urdf/robot/meshes/caster_fork_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="meshes/caster_fork_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="-0.0 0.08 0.001"/>
       <geometry>
-        <mesh filename="file:///home/john/robot/urdf/robot/meshes/caster_fork_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="meshes/caster_fork_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
@@ -146,14 +149,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="-0.08 -0.08 -0.02"/>
       <geometry>
-        <mesh filename="file:///home/john/robot/urdf/robot/meshes/left_wheel_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="meshes/left_wheel_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="-0.08 -0.08 -0.02"/>
       <geometry>
-        <mesh filename="file:///home/john/robot/urdf/robot/meshes/left_wheel_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="meshes/left_wheel_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
@@ -166,17 +169,42 @@
     <visual>
       <origin rpy="0 0 0" xyz="0.08 -0.08 -0.02"/>
       <geometry>
-        <mesh filename="file:///home/john/robot/urdf/robot/meshes/right_wheel_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="meshes/right_wheel_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0.08 -0.08 -0.02"/>
       <geometry>
-        <mesh filename="file:///home/john/robot/urdf/robot/meshes/right_wheel_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="meshes/right_wheel_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
+  <link name="camera_link">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0.01"/>
+      <inertia ixx="1e-6" ixy="0" ixz="0" iyy="1e-6" iyz="0" izz="1e-6"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <box size="0.02 0.02 0.02"/>
+      </geometry>
+      <material name="blue"/>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <box size="0.02 0.02 0.02"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="camera_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_link"/>
+    <origin xyz="0 -0.09 0.05" rpy="0 0 0"/> 
+  </joint>
   <joint name="Revolute 1" type="continuous">
     <origin rpy="0 0 0" xyz="0.005 0.008443 -0.0115"/>
     <parent link="caster_fork_1"/>
