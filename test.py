@@ -2,6 +2,8 @@ import pybullet as p
 import pybullet_data
 import time
 import os
+import numpy as np
+import cv2
 
 physicsClient = p.connect(p.GUI)
 
@@ -81,6 +83,26 @@ try:
     print(f"Found {len(wheel_joints)} drive wheel joints")
     print(f"Found {len(caster_joints)} caster joints")
     
+    # Set up camera
+    camera_distance = 0.5
+    camera_yaw = 0
+    camera_pitch = -30
+    camera_target_position = [0, 0, 0.1]
+    
+    # Get camera link index
+    camera_link_index = None
+    for i in range(num_joints):
+        joint_info = p.getJointInfo(robotId, i)
+        joint_name = joint_info[1].decode('utf-8')
+        if joint_name == "camera_joint":
+            camera_link_index = i
+            break
+    
+    if camera_link_index is not None:
+        print(f"Camera joint found at index: {camera_link_index}")
+    else:
+        print("Camera joint not found, using default camera position")
+    
 except p.error as e:
     print("Error loading URDF!")
     print(e)
@@ -95,32 +117,33 @@ if 'robotId' in locals():
         print("W/S - Forward/Backward")
         print("A/D - Turn Left/Right")
         print("Q/E - Stop")
+        print("Arrow Keys - Camera Control")
         print("ESC - Exit")
         print("\nCaster wheel and fork will rotate freely!")
         
         # Disable PyBullet's default keyboard shortcuts
         p.configureDebugVisualizer(p.COV_ENABLE_KEYBOARD_SHORTCUTS, 0)
-        
+        speed = 10
         for i in range(10000):
             # Handle keyboard input - this captures from the GUI window
             keys = p.getKeyboardEvents()
             for key, state in keys.items():
                 if state & p.KEY_WAS_TRIGGERED:
                     if key == ord('w'):  # Forward
-                        left_wheel_velocity = 10
-                        right_wheel_velocity = -10
+                        left_wheel_velocity = speed
+                        right_wheel_velocity = -speed
                         print("Moving forward")
                     elif key == ord('s'):  # Backward
-                        left_wheel_velocity = -10
-                        right_wheel_velocity = 10
+                        left_wheel_velocity = -speed
+                        right_wheel_velocity = speed
                         print("Moving backward")
                     elif key == ord('a'):  # Turn left
-                        left_wheel_velocity = -10
-                        right_wheel_velocity = -10
+                        left_wheel_velocity = -speed
+                        right_wheel_velocity = -speed
                         print("Turning left")
                     elif key == ord('d'):  # Turn right
-                        left_wheel_velocity = 10
-                        right_wheel_velocity = 10
+                        left_wheel_velocity = speed
+                        right_wheel_velocity = speed
                         print("Turning right")
                     elif key == ord('q') or key == ord('e'):  # Stop
                         left_wheel_velocity = 0
@@ -129,6 +152,19 @@ if 'robotId' in locals():
                     elif key == ord('esc'):  # Exit
                         print("Exiting...")
                         raise KeyboardInterrupt
+                    # Camera controls
+                    elif key == ord('up'):  # Camera up
+                        camera_pitch += 5
+                        print(f"Camera pitch: {camera_pitch}")
+                    elif key == ord('down'):  # Camera down
+                        camera_pitch -= 5
+                        print(f"Camera pitch: {camera_pitch}")
+                    elif key == ord('left'):  # Camera left
+                        camera_yaw += 5
+                        print(f"Camera yaw: {camera_yaw}")
+                    elif key == ord('right'):  # Camera right
+                        camera_yaw -= 5
+                        print(f"Camera yaw: {camera_yaw}")
             
             # Apply wheel velocities to drive wheels only
             if len(wheel_joints) >= 2:
@@ -151,6 +187,55 @@ if 'robotId' in locals():
                         print(f"Caster {joint_name}: velocity={joint_state[1]:.2f}, position={joint_state[0]:.2f}")
             
             p.stepSimulation()
+            
+            # Update camera view to follow robot
+            if 'robotId' in locals():
+                # Get robot position and orientation
+                robot_pos, robot_orient = p.getBasePositionAndOrientation(robotId)
+                
+                # Calculate camera position based on robot position
+                camera_pos = [robot_pos[0], robot_pos[1] - camera_distance, robot_pos[2] + 0.3]
+                camera_target = [robot_pos[0], robot_pos[1], robot_pos[2] + 0.1]
+                
+                # Set camera view
+                view_matrix = p.computeViewMatrixFromYawPitchRoll(
+                    camera_pos, camera_target, camera_yaw, camera_pitch, 0, 2
+                )
+                p.resetDebugVisualizerCamera(
+                    cameraDistance=camera_distance,
+                    cameraYaw=camera_yaw,
+                    cameraPitch=camera_pitch,
+                    cameraTargetPosition=camera_target
+                )
+                
+                # Get camera image from robot's perspective (optional)
+                if camera_link_index is not None:
+                    # Get camera link state
+                    camera_state = p.getLinkState(robotId, camera_link_index)
+                    camera_pos = camera_state[0]
+                    camera_orient = camera_state[1]
+                    
+                    # Convert quaternion to rotation matrix
+                    rot_matrix = p.getMatrixFromQuaternion(camera_orient)
+                    rot_matrix = np.array(rot_matrix).reshape(3, 3)
+                    
+                    # Calculate camera view matrix
+                    camera_view_matrix = p.computeViewMatrix(
+                        camera_pos,
+                        [camera_pos[0], camera_pos[1] - 1, camera_pos[2]],  # Look forward
+                        [0, 0, 1]  # Up vector
+                    )
+                    
+                    # Get camera image (optional - uncomment if you want to save images)
+                    width, height = 640, 480
+                    proj_matrix = p.computeProjectionMatrixFOV(60, width/height, 0.1, 10.0)
+                    img_arr = p.getCameraImage(width, height, camera_view_matrix, proj_matrix, shadow=True, renderer=p.ER_BULLET_HARDWARE_OPENGL)
+                    rgb = img_arr[2]
+                    depth = img_arr[3]
+                    
+                    # You can save the image here if needed
+                    cv2.imwrite(f"camera_frame_{i}.png", rgb)
+            
             time.sleep(1./240.)
             
     except KeyboardInterrupt:
