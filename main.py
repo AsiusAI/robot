@@ -381,8 +381,8 @@ HTML_PAGE = """
     
     <div class="speed-control">
       <div>🚀 Speed Control</div>
-      <input type="range" min="0.1" max="1.5" step="0.1" value="0.4" class="speed-slider" id="speed-slider">
-      <div class="speed-value" id="speed-value">0.4x</div>
+      <input type="range" min="0.1" max="1.5" step="0.1" value="0.3" class="speed-slider" id="speed-slider">
+      <div class="speed-value" id="speed-value">0.3x</div>
     </div>
     
     <div class="controls-section">
