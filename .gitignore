@@ -1,4 +1,1 @@
 .mypy_cache/
-result/
-*.onnx
-__pycache__/
