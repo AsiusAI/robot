@@ -554,6 +554,70 @@
       // VR
       let xrSession = null;
       let refSpace = null;
+      let statsGroup = null;
+      let statsTexts = {};
+
+      // Create stats display for VR
+      function createVRStats() {
+        statsGroup = new THREE.Group();
+        
+        // Create canvas for stats text
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 200;
+        const context = canvas.getContext('2d');
+        
+        function updateStatsText() {
+          context.fillStyle = 'rgba(0, 0, 0, 0.7)';
+          context.fillRect(0, 0, canvas.width, canvas.height);
+          
+          context.fillStyle = 'white';
+          context.font = 'bold 24px Arial';
+          context.textAlign = 'left';
+          
+          const batteryText = document.getElementById("battery-voltage").textContent;
+          const currentText = document.getElementById("motor-current").textContent;
+          const uptimeText = document.getElementById("uptime").textContent;
+          
+          context.fillText(`🔋 Battery: ${batteryText}`, 20, 40);
+          context.fillText(`⚡ Current: ${currentText}`, 20, 80);
+          context.fillText(`⏱️ Uptime: ${uptimeText}`, 20, 120);
+          context.fillText(`🚀 Speed: ${document.getElementById("speed-value").textContent}`, 20, 160);
+          
+          // Update texture
+          if (statsTexts.texture) {
+            statsTexts.texture.needsUpdate = true;
+          }
+        }
+        
+        // Create texture from canvas
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.minFilter = THREE.LinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+        
+        // Create plane for stats
+        const statsGeometry = new THREE.PlaneGeometry(2, 1);
+        const statsMaterial = new THREE.MeshBasicMaterial({ 
+          map: texture, 
+          transparent: true,
+          alphaTest: 0.1
+        });
+        const statsPlane = new THREE.Mesh(statsGeometry, statsMaterial);
+        
+        // Position stats in VR space (top-right corner)
+        statsPlane.position.set(1.5, 1.5, -2);
+        statsPlane.rotation.y = -0.3; // Slight angle for better visibility
+        
+        statsGroup.add(statsPlane);
+        statsTexts.texture = texture;
+        statsTexts.update = updateStatsText;
+        
+        // Initial update
+        updateStatsText();
+        
+        // Update stats every second
+        setInterval(updateStatsText, 1000);
+      }
 
       const onXRFrame = (time, frame) => {
         let session = frame.session;
@@ -622,6 +686,11 @@
 
         renderer.xr.setSession(xrSession);
         video.play();
+        
+        // Create and add stats to VR scene
+        createVRStats();
+        scene.add(statsGroup);
+        
         renderer.setAnimationLoop(() => renderer.render(scene, camera));
       });
     </script>
