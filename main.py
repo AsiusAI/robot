@@ -2,10 +2,10 @@ from typing import Any
 import json
 from modules.camera import create_local_tracks, stop_camera
 from modules.wheels import (
+    control,
     get_status,
     start_odrive,
     cleanup_motors,
-    move,
 )
 import asyncio
 from aiohttp import web
@@ -54,30 +54,6 @@ async def vr(req: web.Request):
     return web.Response(content_type="text/html", text=open("pages/vr.html").read())
 
 
-@routes.post("/control")
-async def control(req: web.Request):
-    data = await req.json()
-    x = data.get("x", 0)  # horizontal (-1 to 1)
-    y = data.get("y", 0)  # vertical (-1 to 1)
-    speed = data.get("speed", 1.0)  # speed multiplier (0.1 to 3.0)
-
-    # Map joystick input to differential drive wheel speeds
-    left = y + x
-    right = y - x
-
-    # Clamp to [-1, 1]
-    left = max(-1, min(1, left))
-    right = max(-1, min(1, right))
-
-    move(left=left, right=right, speed=speed)
-    print(f"{left=}, {right=}, speed={speed}")
-
-    return web.Response(
-        content_type="application/json",
-        body=json.dumps({"left": left, "right": right, "speed": speed}),
-    )
-
-
 @routes.post("/offer")
 async def offer(request: web.Request) -> web.Response:
     params = await request.json()
@@ -108,8 +84,15 @@ async def offer(request: web.Request) -> web.Response:
         @channel.on("message")
         def on_message(message) -> None:
             print(f"Received message on channel '{channel.label}': {message}")
-            data = json.loads(message)
-            # TODO: handle messages
+            msg = json.loads(message)
+            data = msg["data"]
+            print(msg)
+
+            if msg["type"] == "control":
+                control(x=data["x"], y=data["y"], speed=data["speed"])
+            else:
+                raise Exception(f"Invalid type {data['type']}")
+
             print(f"Parsed message: {data}")
 
     audio, video = create_local_tracks()
@@ -147,9 +130,9 @@ if __name__ == "__main__":
     app = web.Application()
     app.on_shutdown.append(on_shutdown)
     app.add_routes(routes)
-    
+
     async def start_status_monitor(application):
         asyncio.create_task(status_monitor())
-    
+
     app.on_startup.append(start_status_monitor)
     web.run_app(app, port=8000)

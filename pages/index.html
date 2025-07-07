@@ -552,17 +552,7 @@
       } else {
         lastSendTime = now;
       }
-
-      fetch('/control', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ x, y, speed: currentSpeed })
-      })
-        .then(res => res.json())
-        .then(data => {
-          console.log("Wheel output:", data);
-        })
-        .catch(err => console.log('Control failed:', err));
+      sendData("control", { x, y, speed: currentSpeed })
     }
 
     // Prevent context menu on long press

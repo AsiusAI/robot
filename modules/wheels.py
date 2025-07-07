@@ -57,3 +57,16 @@ def move(left, right, speed):
     if axis0 and axis1:
         axis0.controller.input_vel = right * speed
         axis1.controller.input_vel = left * -1 * speed
+
+        
+def control(x, y, speed):
+    print(x,y,speed)
+    left = y + x
+    right = y - x
+
+    left = max(-1, min(1, left))
+    right = max(-1, min(1, right))
+
+    move(left=left, right=right, speed=speed)
+    print(f"{left=}, {right=}, {speed=}")
+
