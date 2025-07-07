@@ -21,6 +21,29 @@ start_odrive()
 routes = web.RouteTableDef()
 
 
+pcs: set[RTCPeerConnection] = set()
+data_channels: dict[RTCPeerConnection, RTCDataChannel] = {}
+
+
+def send_message(pc, type, data):
+    channel = data_channels[pc]
+    channel.send(json.dumps({"type": type, "data": data}))
+
+
+def send_to_all(type, data):
+    print(f"Sending {type} {data} to {len(pcs)} clients")
+    for pc in pcs:
+        send_message(pc, type, data)
+
+
+async def status_monitor():
+    while True:
+        voltage, current, uptime = get_status()
+        data = {"voltage": voltage, "current": current, "uptime": uptime}
+        send_to_all("status", data)
+        await asyncio.sleep(5)
+
+
 @routes.get("/")
 async def index(req: web.Request):
     return web.Response(content_type="text/html", text=open("pages/index.html").read())
@@ -29,11 +52,6 @@ async def index(req: web.Request):
 @routes.get("/vr")
 async def vr(req: web.Request):
     return web.Response(content_type="text/html", text=open("pages/vr.html").read())
-
-
-@routes.get("/status")
-async def status(req: web.Request):
-    return web.Response(content_type="application/json", text=json.dumps(get_status()))
 
 
 @routes.post("/control")
@@ -60,15 +78,6 @@ async def control(req: web.Request):
     )
 
 
-pcs = set()
-data_channels: dict[RTCPeerConnection, RTCDataChannel] = {}
-
-
-def send_message(pc, type, data):
-    channel = data_channels[pc]
-    channel.send(json.dumps({"type": type, "data": data}))
-
-
 @routes.post("/offer")
 async def offer(request: web.Request) -> web.Response:
     params = await request.json()
@@ -83,25 +92,24 @@ async def offer(request: web.Request) -> web.Response:
         if pc.connectionState == "failed":
             await pc.close()
             pcs.discard(pc)
+            data_channels.pop(pc)
 
     @pc.on("datachannel")
     def on_datachannel(channel: RTCDataChannel) -> None:
         print(f"Data channel received: {channel.label}")
-
-        @channel.on("open")
-        def on_open() -> None:
-            print(f"Data channel '{channel.label}' opened")
-            data_channels[pc] = channel
+        data_channels[pc] = channel
 
         @channel.on("close")
         def on_close() -> None:
             print(f"Data channel '{channel.label}' closed")
-            del data_channels[pc]
+            data_channels.pop(pc)
+            pcs.discard(pc)
 
         @channel.on("message")
         def on_message(message) -> None:
             print(f"Received message on channel '{channel.label}': {message}")
             data = json.loads(message)
+            # TODO: handle messages
             print(f"Parsed message: {data}")
 
     audio, video = create_local_tracks()
@@ -130,6 +138,7 @@ async def on_shutdown(app: Any) -> None:
     coros = [pc.close() for pc in pcs]
     await asyncio.gather(*coros)
     pcs.clear()
+    data_channels.clear()
 
     stop_camera()
 
@@ -138,4 +147,9 @@ if __name__ == "__main__":
     app = web.Application()
     app.on_shutdown.append(on_shutdown)
     app.add_routes(routes)
+    
+    async def start_status_monitor(application):
+        asyncio.create_task(status_monitor())
+    
+    app.on_startup.append(start_status_monitor)
     web.run_app(app, port=8000)

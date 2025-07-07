@@ -8,34 +8,22 @@ odrv0 = None
 axis0 = None
 axis1 = None
 
-# Global variables for status
-battery_voltage = 0.0
-motor_currents = [0.0, 0.0]
-uptime = 0
+start_time = time.time()
 
 
-def get_battery_status():
-    """Get battery and motor status from ODrive"""
-    global battery_voltage, motor_currents, axis0, axis1, odrv0
-    try:
-        if odrv0 and axis0 and axis1:
-            battery_voltage = odrv0.vbus_voltage
-            motor_currents = [
-                axis0.motor.current_control.Iq_measured,
-                axis1.motor.current_control.Iq_measured,
-            ]
-    except Exception as e:
-        print(f"Error reading status: {e}")
+def get_status():
+    uptime = int(time.time() - start_time)
 
+    if not odrv0 or not axis0 or not axis1:
+        return 0, 0, uptime
 
-def status_monitor():
-    """Background thread to monitor system status"""
-    global uptime
-    start_time = time.time()
-    while True:
-        uptime = int(time.time() - start_time)
-        get_battery_status()
-        time.sleep(1)
+    voltage = odrv0.vbus_voltage
+    currents = [
+        axis0.motor.current_control.Iq_measured,
+        axis1.motor.current_control.Iq_measured,
+    ]
+    current = max(abs(current) for current in currents) if currents else 0
+    return voltage, current, uptime
 
 
 def cleanup_motors():
@@ -69,19 +57,3 @@ def move(left, right, speed):
     if axis0 and axis1:
         axis0.controller.input_vel = right * speed
         axis1.controller.input_vel = left * -1 * speed
-
-status_thread = threading.Thread(target=status_monitor, daemon=True)
-status_thread.start()
-
-def get_status():
-    global battery_voltage, motor_currents, uptime
-    print(battery_voltage,motor_currents,uptime)
-    motor_current = (
-        max(abs(current) for current in motor_currents) if motor_currents else 0
-    )
-
-    return {
-        "battery_voltage": battery_voltage,
-        "motor_current": motor_current,
-        "uptime": uptime,
-    }
