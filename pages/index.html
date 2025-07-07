@@ -2,6 +2,8 @@
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
     <style>
       * {
         margin: 0;
@@ -587,9 +589,29 @@
         sendData("vr", res);
       };
 
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      const renderer = new THREE.WebGLRenderer();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.xr.enabled = true;
+      document.body.appendChild(renderer.domElement);
+
+      const light = new THREE.AmbientLight(0xffffff, 1);
+      scene.add(light);
+
+      const video = document.getElementById("video");
+      const texture = new THREE.VideoTexture(video);
+      const geometry = new THREE.PlaneGeometry(4, 2.25);
+      const material = new THREE.MeshBasicMaterial({ map: texture });
+      const screen = new THREE.Mesh(geometry, material);
+      screen.position.z = -3;
+      scene.add(screen);
+
       document.getElementById("enter-vr").addEventListener("click", async () => {
         if (!navigator.xr) return alert("WebXR not supported!");
-        xrSession = await navigator.xr.requestSession("immersive-vr");
+        xrSession = await navigator.xr.requestSession("immersive-ar", {
+          requiredFeatures: ["local-floor"],
+        });
         const glCanvas = document.createElement("canvas");
         const gl = glCanvas.getContext("webgl", { xrCompatible: true });
         await xrSession.updateRenderState({ baseLayer: new XRWebGLLayer(xrSession, gl) });
@@ -597,6 +619,10 @@
         refSpace = await xrSession.requestReferenceSpace("local");
 
         xrSession.requestAnimationFrame(onXRFrame);
+
+        renderer.xr.setSession(xrSession);
+        video.play();
+        renderer.setAnimationLoop(() => renderer.render(scene, camera));
       });
     </script>
   </body>

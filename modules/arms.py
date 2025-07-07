@@ -7,18 +7,25 @@ arms = {
     "right": SO101Follower(SO101FollowerConfig(port="/dev/ttyACM1", id="right")),
 }
 
-
+connected = False
 def connect_arms():
-    for _, arm in arms.items():
-        arm.connect(False)
+    global connected
+    connected = True
+    try:
+        for _, arm in arms.items():
+            arm.connect(False)
+    except:
+        print("Failed to connect arms")
 
 
 def get_arm_pos(arm):
+    if not connected: raise Exception("Not connected")
     arm = arms[arm]
     return arm.get_observation()
 
 
 def set_gripper_pos(arm, pos):
+    if not connected: raise Exception("Not connected")
     arm = arms[arm]
     arm.send_action({"gripper.pos": pos * 100})
 
@@ -34,5 +41,6 @@ def set_gripper_pos(arm, pos):
 #     }
 # )
 def disconnect_arms():
+    if not connected: raise Exception("Not connected")
     for _, arm in arms.items():
         arm.disconnect()
