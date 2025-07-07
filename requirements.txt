@@ -1,4 +1,8 @@
 pyserial
-flask
 odrive
 opencv-python
+lerobot
+flask[async]
+aiortc
+uvicorn
+asgiref
