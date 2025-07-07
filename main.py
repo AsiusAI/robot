@@ -1,13 +1,19 @@
 from typing import Any
 import json
-from modules.camera import generate_frames
+from modules.camera import create_local_tracks, stop_camera
 from modules.wheels import (
     get_status,
     start_odrive,
     cleanup_motors,
     move,
 )
+import asyncio
 from aiohttp import web
+from aiortc import (
+    RTCPeerConnection,
+    RTCSessionDescription,
+    RTCDataChannel,
+)
 
 
 start_odrive()
@@ -23,13 +29,6 @@ async def index(req: web.Request):
 @routes.get("/vr")
 async def vr(req: web.Request):
     return web.Response(content_type="text/html", text=open("pages/vr.html").read())
-
-
-@routes.get("/video_feed")
-async def video_feed(req: web.Request):
-    return web.Response(
-        content_type="multipart/x-mixed-replace; boundary=frame", body=generate_frames()
-    )
 
 
 @routes.get("/status")
@@ -55,11 +54,84 @@ async def control(req: web.Request):
     move(left=left, right=right, speed=speed)
     print(f"{left=}, {right=}, speed={speed}")
 
-    return web.Response(content_type="application/json", body= json.dumps({"left": left, "right": right, "speed": speed}))
+    return web.Response(
+        content_type="application/json",
+        body=json.dumps({"left": left, "right": right, "speed": speed}),
+    )
+
+
+pcs = set()
+data_channels: dict[RTCPeerConnection, RTCDataChannel] = {}
+
+
+def send_message(pc, type, data):
+    channel = data_channels[pc]
+    channel.send(json.dumps({"type": type, "data": data}))
+
+
+@routes.post("/offer")
+async def offer(request: web.Request) -> web.Response:
+    params = await request.json()
+    offer = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
+
+    pc = RTCPeerConnection()
+    pcs.add(pc)
+
+    @pc.on("connectionstatechange")
+    async def on_connectionstatechange() -> None:
+        print("Connection state is %s" % pc.connectionState)
+        if pc.connectionState == "failed":
+            await pc.close()
+            pcs.discard(pc)
+
+    @pc.on("datachannel")
+    def on_datachannel(channel: RTCDataChannel) -> None:
+        print(f"Data channel received: {channel.label}")
+
+        @channel.on("open")
+        def on_open() -> None:
+            print(f"Data channel '{channel.label}' opened")
+            data_channels[pc] = channel
+
+        @channel.on("close")
+        def on_close() -> None:
+            print(f"Data channel '{channel.label}' closed")
+            del data_channels[pc]
+
+        @channel.on("message")
+        def on_message(message) -> None:
+            print(f"Received message on channel '{channel.label}': {message}")
+            data = json.loads(message)
+            print(f"Parsed message: {data}")
+
+    audio, video = create_local_tracks()
+
+    if audio:
+        pc.addTrack(audio)
+
+    if video:
+        pc.addTrack(video)
+
+    await pc.setRemoteDescription(offer)
+
+    answer = await pc.createAnswer()
+    await pc.setLocalDescription(answer)
+
+    return web.Response(
+        content_type="application/json",
+        text=json.dumps(
+            {"sdp": pc.localDescription.sdp, "type": pc.localDescription.type}
+        ),
+    )
 
 
 async def on_shutdown(app: Any) -> None:
     cleanup_motors()
+    coros = [pc.close() for pc in pcs]
+    await asyncio.gather(*coros)
+    pcs.clear()
+
+    stop_camera()
 
 
 if __name__ == "__main__":

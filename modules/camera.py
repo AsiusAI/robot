@@ -1,23 +1,44 @@
-import cv2
+from modules.wheels import (
+    get_status,
+    start_odrive,
+    cleanup_motors,
+    move,
+)
+import platform
+from typing import Optional
 
-camera = cv2.VideoCapture(0)
-
-# Set camera properties for better performance
-camera.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-camera.set(cv2.CAP_PROP_FPS, 15)  # Reduce FPS for better streaming
+from aiortc import (
+    MediaStreamTrack,
+)
+from aiortc.contrib.media import MediaPlayer, MediaRelay
 
 
-def generate_frames():
-    while True:
-        success, frame = camera.read()
-        if not success:
-            break
+relay = None
+webcam = None
+
+
+def create_local_tracks() -> (
+    tuple[Optional[MediaStreamTrack], Optional[MediaStreamTrack]]
+):
+    global relay, webcam
+
+    options = {"framerate": "30", "video_size": "640x480"}
+    if relay is None:
+        if platform.system() == "Darwin":
+            webcam = MediaPlayer("default:none", format="avfoundation", options=options)
+        elif platform.system() == "Windows":
+            webcam = MediaPlayer(
+                "video=Integrated Camera", format="dshow", options=options
+            )
         else:
-            # Encode frame as JPEG
-            ret, buffer = cv2.imencode('.jpg', frame)
-            frame = buffer.tobytes()
+            webcam = MediaPlayer("/dev/video0", format="v4l2", options=options)
+        relay = MediaRelay()
 
-            # Yield the frame as a multipart HTTP response
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+    if webcam and webcam.video:
+        return None, relay.subscribe(webcam.video)
+    return None, None
+
+
+def stop_camera():
+    if webcam is not None and webcam.video is not None:
+        webcam.video.stop()
