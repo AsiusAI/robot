@@ -1,7 +1,5 @@
-from flask import Flask, Response, render_template_string, request, jsonify
-import signal
-import sys
-import atexit
+from typing import Any
+import json
 from modules.camera import generate_frames
 from modules.wheels import (
     get_status,
@@ -9,50 +7,39 @@ from modules.wheels import (
     cleanup_motors,
     move,
 )
+from aiohttp import web
+
 
 start_odrive()
 
-app = Flask(__name__)
+routes = web.RouteTableDef()
 
 
-def signal_handler(sig, frame):
-    """Handle Ctrl+C and other termination signals"""
-    print("\nShutting down gracefully...")
-    cleanup_motors()
-    sys.exit(0)
+@routes.get("/")
+async def index(req: web.Request):
+    return web.Response(content_type="text/html", text=open("pages/index.html").read())
 
 
-# Register signal handlers and cleanup
-signal.signal(signal.SIGINT, signal_handler)
-signal.signal(signal.SIGTERM, signal_handler)
-atexit.register(cleanup_motors)
+@routes.get("/vr")
+async def vr(req: web.Request):
+    return web.Response(content_type="text/html", text=open("pages/vr.html").read())
 
 
-@app.route("/")
-def index():
-    return render_template_string(open("pages/index.html", "r").read())
-
-
-@app.route("/vr")
-def vr():
-    return render_template_string(open("pages/vr.html", "r").read())
-
-
-@app.route("/video_feed")
-def video_feed():
-    return Response(
-        generate_frames(), mimetype="multipart/x-mixed-replace; boundary=frame"
+@routes.get("/video_feed")
+async def video_feed(req: web.Request):
+    return web.Response(
+        content_type="multipart/x-mixed-replace; boundary=frame", body=generate_frames()
     )
 
 
-@app.route("/status")
-def status():
-    return get_status()
+@routes.get("/status")
+async def status(req: web.Request):
+    return web.Response(content_type="application/json", text=json.dumps(get_status()))
 
 
-@app.route("/control", methods=["POST"])
-def control():
-    data = request.get_json()
+@routes.post("/control")
+async def control(req: web.Request):
+    data = await req.json()
     x = data.get("x", 0)  # horizontal (-1 to 1)
     y = data.get("y", 0)  # vertical (-1 to 1)
     speed = data.get("speed", 1.0)  # speed multiplier (0.1 to 3.0)
@@ -68,8 +55,15 @@ def control():
     move(left=left, right=right, speed=speed)
     print(f"{left=}, {right=}, speed={speed}")
 
-    return jsonify(left=left, right=right, speed=speed)
+    return web.Response(content_type="application/json", body= json.dumps({"left": left, "right": right, "speed": speed}))
+
+
+async def on_shutdown(app: Any) -> None:
+    cleanup_motors()
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000, debug=False)
+    app = web.Application()
+    app.on_shutdown.append(on_shutdown)
+    app.add_routes(routes)
+    web.run_app(app, port=8000)

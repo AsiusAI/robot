@@ -1,17 +1,12 @@
-import argparse
 import asyncio
 import json
-import logging
-import os
 import platform
-import ssl
-from typing import Optional
+from typing import Any, Optional
 
 from aiohttp import web
 from aiortc import (
     MediaStreamTrack,
     RTCPeerConnection,
-    RTCRtpSender,
     RTCSessionDescription,
     RTCDataChannel,
 )
@@ -48,7 +43,7 @@ def create_local_tracks() -> (
 
 @routes.get("/")
 async def index(request: web.Request):
-    return web.Response(content_type="text/html", text=open("webrtc.html", "r").read())
+    return web.Response(content_type="text/html", text=open("pages/webrtc.html", "r").read())
 
 
 def send_message(pc, type, data):
@@ -94,10 +89,10 @@ async def offer(request: web.Request) -> web.Response:
     audio, video = create_local_tracks()
 
     if audio:
-        audio_sender = pc.addTrack(audio)
+        pc.addTrack(audio)
 
     if video:
-        video_sender = pc.addTrack(video)
+        pc.addTrack(video)
 
     await pc.setRemoteDescription(offer)
 
@@ -112,7 +107,7 @@ async def offer(request: web.Request) -> web.Response:
     )
 
 
-async def on_shutdown(app: web.Application) -> None:
+async def on_shutdown(app: Any) -> None:
     # Close peer connections.
     coros = [pc.close() for pc in pcs]
     await asyncio.gather(*coros)
