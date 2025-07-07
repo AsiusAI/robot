@@ -60,7 +60,6 @@ def move(left, right, speed):
 
         
 def control(x, y, speed):
-    print(x,y,speed)
     left = y + x
     right = y - x
 
@@ -68,5 +67,4 @@ def control(x, y, speed):
     right = max(-1, min(1, right))
 
     move(left=left, right=right, speed=speed)
-    print(f"{left=}, {right=}, {speed=}")
 

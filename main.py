@@ -1,5 +1,6 @@
 from typing import Any
 import json
+from modules.arms import connect_arms, disconnect_arms, set_gripper_pos
 from modules.camera import create_local_tracks, stop_camera
 from modules.wheels import (
     control,
@@ -17,6 +18,7 @@ from aiortc import (
 
 
 start_odrive()
+connect_arms()
 
 routes = web.RouteTableDef()
 
@@ -26,6 +28,8 @@ data_channels: dict[RTCPeerConnection, RTCDataChannel] = {}
 
 
 def send_message(pc, type, data):
+    if pc not in data_channels:
+        return
     channel = data_channels[pc]
     channel.send(json.dumps({"type": type, "data": data}))
 
@@ -47,11 +51,6 @@ async def status_monitor():
 @routes.get("/")
 async def index(req: web.Request):
     return web.Response(content_type="text/html", text=open("pages/index.html").read())
-
-
-@routes.get("/vr")
-async def vr(req: web.Request):
-    return web.Response(content_type="text/html", text=open("pages/vr.html").read())
 
 
 @routes.post("/offer")
@@ -83,17 +82,32 @@ async def offer(request: web.Request) -> web.Response:
 
         @channel.on("message")
         def on_message(message) -> None:
-            print(f"Received message on channel '{channel.label}': {message}")
             msg = json.loads(message)
-            data = msg["data"]
-            print(msg)
+            try:
+                data = msg["data"]
 
-            if msg["type"] == "control":
-                control(x=data["x"], y=data["y"], speed=data["speed"])
-            else:
-                raise Exception(f"Invalid type {data['type']}")
+                if msg["type"] == "control":
+                    control(x=data["x"], y=data["y"], speed=data["speed"])
+                if msg["type"] == "vr":
+                    joystick = None
+                    if "left" in data:
+                        left = data["left"]
+                        joystick = left["joystick"]
+                        set_gripper_pos("left", (left["trigger"] - 1) * -1)
 
-            print(f"Parsed message: {data}")
+                    if "right" in data:
+                        right = data["right"]
+                        joystick = right["joystick"]
+                        set_gripper_pos("right", (right["trigger"] - 1) * -1)
+
+                    if joystick:
+                        control(
+                            x=joystick["x"],
+                            y=joystick["y"] * -1,
+                            speed=0.4,
+                        )
+            except Exception as e:
+                print(e)
 
     audio, video = create_local_tracks()
 
@@ -124,6 +138,7 @@ async def on_shutdown(app: Any) -> None:
     data_channels.clear()
 
     stop_camera()
+    disconnect_arms()
 
 
 if __name__ == "__main__":
