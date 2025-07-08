@@ -135,11 +135,13 @@ if __name__ == "__main__":
             
             # Define a new target pose by moving 5cm forward (X) and 2cm up (Z)
             target_pose = np.copy(current_pose)
-            target_pose[0, 3] += 0.05  # Move +5cm in X
-            target_pose[2, 3] += 0.02  # Move +2cm in Z
+            target_pose[0, 3] += 0.1  # X
+            target_pose[1, 3] += 0.1  # Y
+            target_pose[2, 3] += 0.1  # Z
             
             # Call the new function to move the arm
-            move_arm_to_pose("right", target_pose)
+            move_arm_to_pose("left", target_pose)
             
     finally:
-        disconnect_arms()
+        print("done")
+        # disconnect_arms()
