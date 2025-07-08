@@ -5,3 +5,6 @@ flask[async]
 aiortc
 uvicorn
 asgiref
+numpy
+scipy
+placo
