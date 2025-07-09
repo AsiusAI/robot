@@ -91,14 +91,14 @@ async def offer(request: web.Request) -> web.Response:
                 if msg["type"] == "vr":
                     joystick = None
                     if "left" in data:
-                        left = data["left"]
-                        joystick = left["joystick"]
-                        set_gripper_pos("left", (left["trigger"] - 1) * -1)
+                        controller = data["left"]
+                        joystick = controller["joystick"]
+                        set_gripper_pos("left", (controller["trigger"] - 1) * -1)
 
                     if "right" in data:
-                        right = data["right"]
-                        joystick = right["joystick"]
-                        set_gripper_pos("right", (right["trigger"] - 1) * -1)
+                        controller = data["right"]
+                        joystick = controller["joystick"]
+                        set_gripper_pos("right", (controller["trigger"] - 1) * -1)
 
                     if joystick:
                         control(

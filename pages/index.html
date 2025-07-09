@@ -554,14 +554,14 @@
       let refSpace = null;
       let statsGroup = null;
       let statsTexts = {};
-      let frameData = {}
+      let frameData = {};
 
       function createVRStats() {
         statsGroup = new THREE.Group();
 
         const canvas = document.createElement("canvas");
         canvas.width = 512;
-        canvas.height = 200;
+        canvas.height = 400;
         const context = canvas.getContext("2d");
 
         function updateStatsText() {
@@ -569,7 +569,7 @@
           context.fillRect(0, 0, canvas.width, canvas.height);
 
           context.fillStyle = "white";
-          context.font = "bold 14px Arial";
+          context.font = "bold 12px Arial";
           context.textAlign = "left";
 
           const batteryText = document.getElementById("battery-voltage").textContent;
@@ -580,8 +580,18 @@
           context.fillText(`⚡ Current: ${currentText}`, 20, 80);
           context.fillText(`⏱️ Uptime: ${uptimeText}`, 20, 120);
           context.fillText(`🚀 Speed: ${document.getElementById("speed-value").textContent}`, 20, 160);
-          context.fillText(`⏱️ Right: ${JSON.stringify(frameData.right)}`, 20, 180);
-          context.fillText(`⏱️ Left: ${JSON.stringify(frameData.left)}`, 20, 200);
+          const fmt = (num) => num.toFixed(2);
+          const pos = (pos) => `x=${fmt(pos.x)}, y=${fmt(pos.y)}, z=${fmt(pos.z)}, w=${fmt(pos.w)}`;
+          
+          if (frameData.right) {
+            context.fillText(`Right pos: ${pos(frameData.right.pos)}`, 20, 180);
+            context.fillText(`Right rot: ${pos(frameData.right.rot)}`, 20, 200);
+          }
+          
+          if (frameData.left) {
+            context.fillText(`Left pos: ${pos(frameData.left.pos)}`, 20, 220);
+            context.fillText(`Left rot: ${pos(frameData.left.rot)}`, 20, 240);
+          }
 
           if (statsTexts.texture) statsTexts.texture.needsUpdate = true;
         }
@@ -607,7 +617,7 @@
 
         updateStatsText();
 
-        setInterval(updateStatsText, 1000);
+        setInterval(updateStatsText, 200);
       }
 
       const onXRFrame = (time, frame) => {
@@ -615,7 +625,7 @@
         session.requestAnimationFrame(onXRFrame);
 
         const inputSources = session.inputSources;
-        frameData = {}
+        frameData = {};
         for (const input of inputSources) {
           if (!input.gripSpace) continue;
           const handedness = input.handedness;
@@ -664,7 +674,7 @@
 
       document.getElementById("enter-vr").addEventListener("click", async () => {
         if (!navigator.xr) return alert("WebXR not supported!");
-        const session= await navigator.xr.requestSession("immersive-ar", {
+        const session = await navigator.xr.requestSession("immersive-ar", {
           requiredFeatures: ["local-floor"],
         });
         const glCanvas = document.createElement("canvas");
