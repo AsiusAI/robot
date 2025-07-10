@@ -10,9 +10,9 @@ from aiortc import (
     RTCDataChannel,
 )
 
-from robots.v1 import RobotV1
+from robots.sim import SimRobot
 
-robot = RobotV1()
+robot = SimRobot()
 robot.start()
 
 routes = web.RouteTableDef()

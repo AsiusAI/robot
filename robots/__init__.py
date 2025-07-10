@@ -43,15 +43,18 @@ class Robot:
     def stop(self):
         raise Exception("Not implemented!")
 
-    def move(self, left: float, right: float, speed: float):
+    def status(self):
         raise Exception("Not implemented!")
 
-    def status(self):
+    def move(self, left: float, right: float, speed: float):
         raise Exception("Not implemented!")
 
     def get_media_stream(
         self,
     ) -> tuple[Optional[MediaStreamTrack], Optional[MediaStreamTrack]]:
+        raise Exception("Not implemented!")
+
+    def move_arm(self, arm: Literal["left", "right"], pos: ArmPosition):
         raise Exception("Not implemented!")
 
     def move_with_joystick(self, x: float, y: float, speed: float):
@@ -62,9 +65,6 @@ class Robot:
         right = max(-1, min(1, right))
 
         self.move(left=left, right=right, speed=speed)
-
-    def move_arm(self, arm: Literal["left", "right"], pos: ArmPosition):
-        raise Exception("Not implemented!")
 
     def _get_ik(
         self,
