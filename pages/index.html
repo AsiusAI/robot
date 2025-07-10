@@ -635,8 +635,9 @@
           if (!pose) continue;
 
           const vrPos = pose.transform.position
-          const pos = vrPos ? { x: -vrPos.z, y: vrPos.x, z: vrPos.y ,w:1} : undefined
-          const rot = pose.transform.orientation;
+          const vrRot = pose.transform.orientation
+          const pos = vrPos ? { x: -vrPos.z, y: -vrPos.x, z: vrPos.y, w: 1 } : undefined
+          const rot = vrRot ? { x: -vrRot.z, y: -vrRot.x, z: vrRot.y, w: vrRot.w } : undefined
 
           const gamepad = input.gamepad;
           let trigger = null;

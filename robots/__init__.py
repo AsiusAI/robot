@@ -25,15 +25,25 @@ class ArmPosition:
     gripper: Optional[float] = None
 
 
-robot = placo.RobotWrapper(
+left_robot = placo.RobotWrapper(
     "sim/SO101/so101_new_calib.urdf",
 )
-solver = placo.KinematicsSolver(robot)
-solver.mask_fbase(True)
-effector_task = solver.add_frame_task("gripper_frame_joint", np.eye(4))
-effector_task.configure("effector", "soft", 10.0, 1.0)
-solver.enable_velocity_limits(True)
-solver.dt = 0.01
+left_solver = placo.KinematicsSolver(left_robot)
+left_solver.mask_fbase(True)
+left_task = left_solver.add_frame_task("gripper", np.eye(4))
+left_task.configure("effector", "soft", 3.0, 1.0)
+left_solver.enable_velocity_limits(True)
+left_solver.dt = 0.01
+
+right_robot = placo.RobotWrapper(
+    "sim/SO101/so101_new_calib.urdf",
+)
+right_solver = placo.KinematicsSolver(right_robot)
+right_solver.mask_fbase(True)
+right_task = right_solver.add_frame_task("gripper", np.eye(4))
+right_task.configure("effector", "soft", 3.0, 1.0)
+right_solver.enable_velocity_limits(True)
+right_solver.dt = 0.01
 
 
 class Robot:
@@ -72,20 +82,30 @@ class Robot:
         position: List[float],
         orientation: List[float],
     ):
-        x, y, z = position
+        pX, pY, pZ = position
+        oX, oY, oZ, oW = orientation
+
         if arm == "left":
-            position = [x, z * -1, y * -1]
+            position = [pX, -pZ, pY]
+            orientation = [oX, -oZ, oY, oW]
         if arm == "right":
-            position = [x, z, y]
+            position = [pX, pZ, -pY]
+            orientation = [oX, oZ, -oY, oW]
 
         T_world_frame = np.eye(4)
         rotation = Rotation.from_quat(orientation)
         T_world_frame[:3, :3] = rotation.as_matrix()
         T_world_frame[:3, 3] = position
-        effector_task.T_world_frame = T_world_frame
-        solver.solve(True)
-        robot.update_kinematics()
-        return ArmPosition(*robot.state.q[7:])
+        if arm == "left":
+            left_task.T_world_frame = T_world_frame
+            left_solver.solve(True)
+            left_robot.update_kinematics()
+            return ArmPosition(*left_robot.state.q[7:])
+        if arm == "right":
+            right_task.T_world_frame = T_world_frame
+            right_solver.solve(True)
+            right_robot.update_kinematics()
+            return ArmPosition(*right_robot.state.q[7:])
 
     def move_arm_with_ik(
         self,
