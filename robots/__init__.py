@@ -60,7 +60,18 @@ class Robot:
     def move_arm(self, arm: Literal["left", "right"], pos: ArmPosition):
         raise Exception("Not implemented!")
 
-    def _get_ik(self, position: List[float], orientation: List[float]):
+    def _get_ik(
+        self,
+        arm: Literal["left", "right"],
+        position: List[float],
+        orientation: List[float],
+    ):
+        x, y, z = position
+        if arm == "left":
+            position = [x, z * -1, y * -1]
+        if arm == "right":
+            position = [x, z, y]
+
         T_world_frame = np.eye(4)
         rotation = Rotation.from_quat(orientation)
         T_world_frame[:3, :3] = rotation.as_matrix()
@@ -76,5 +87,5 @@ class Robot:
         position: List[float],
         orientation: List[float],
     ):
-        pos = self._get_ik(position, orientation)
+        pos = self._get_ik(arm, position, orientation)
         return self.move_arm(arm, pos)

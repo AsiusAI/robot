@@ -1,6 +1,6 @@
 import dataclasses
 import math
-from typing import Any
+from typing import Any, List
 import json
 from modules.camera import create_local_tracks, stop_camera
 import asyncio
@@ -48,6 +48,11 @@ async def index(req: web.Request):
     return web.Response(content_type="text/html", text=open("pages/index.html").read())
 
 
+def vr_to_robot_coords(vr_position: List[float]):
+    x, y, z = vr_position
+    return [-z, -x, y]
+
+
 @routes.post("/offer")
 async def offer(request: web.Request) -> web.Response:
     params = await request.json()
@@ -90,6 +95,16 @@ async def offer(request: web.Request) -> web.Response:
                     if "left" in data:
                         controller = data["left"]
                         joystick = controller["joystick"]
+                        if controller["pos"]:
+                            pos = controller["pos"]
+                            rot = controller["rot"]
+                            res = robot._get_ik(
+                                "left",
+                                vr_to_robot_coords([pos["x"], pos["y"], pos["z"]]),
+                                [rot["x"], rot["y"], rot["z"], rot["w"]],
+                            )
+                            res.gripper = (controller["trigger"] - 1) * -(math.pi / 2)
+                            robot.move_arm("left", res)
 
                     if "right" in data:
                         controller = data["right"]
@@ -98,7 +113,8 @@ async def offer(request: web.Request) -> web.Response:
                             pos = controller["pos"]
                             rot = controller["rot"]
                             res = robot._get_ik(
-                                [pos["x"], pos["y"], pos["z"]],
+                                "right",
+                                vr_to_robot_coords([pos["x"], pos["y"], pos["z"]]),
                                 [rot["x"], rot["y"], rot["z"], rot["w"]],
                             )
                             res.gripper = (controller["trigger"] - 1) * -(math.pi / 2)

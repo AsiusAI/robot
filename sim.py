@@ -10,12 +10,23 @@ p.setAdditionalSearchPath(pybullet_data.getDataPath())
 
 p.setGravity(0, 0, -9.81)
 planeId = p.loadURDF("plane.urdf")
-robot_id = p.loadURDF(
+# Position the left arm at origin, facing right
+left_id = p.loadURDF(
     "sim/SO101/so101_new_calib.urdf",
+    basePosition=[0.0, 0.08, 0.5],
+    baseOrientation=p.getQuaternionFromEuler([-np.pi / 2, 0, 0]),
     useFixedBase=True,
 )
 
-num_joints = p.getNumJoints(robot_id)
+# Position the right arm 20cm to the right, facing left (rotated 180 degrees around Z-axis)
+right_id = p.loadURDF(
+    "sim/SO101/so101_new_calib.urdf",
+    basePosition=[0.0, 0.0, 0.5],
+    baseOrientation=p.getQuaternionFromEuler([np.pi / 2, 0, 0]),
+    useFixedBase=True,
+)
+
+num_joints = p.getNumJoints(left_id)
 
 end_effector = "gripper_frame_joint"
 end_effector_link_index = 5  # gripper_frame_joint
@@ -24,7 +35,7 @@ end_effector_link_index = 5  # gripper_frame_joint
 def find_joint(name):
     """Finds a joint by its name and returns its info."""
     for i in range(num_joints):
-        joint_info = p.getJointInfo(robot_id, i)
+        joint_info = p.getJointInfo(left_id, i)
         joint_name = joint_info[1].decode("utf-8")
         if joint_name == name:
             lower_limit = joint_info[8]
@@ -39,9 +50,9 @@ def find_joint(name):
 
 gripper_id, gripper_lower, gripper_upper = find_joint("gripper")
 
-x_slider = p.addUserDebugParameter("Target X", -1.0, 1.0, 0.3)
-y_slider = p.addUserDebugParameter("Target Y", -1.0, 1.0, 0)
-z_slider = p.addUserDebugParameter("Target Z", 0.0, 1.5, 0.5)
+x_slider = p.addUserDebugParameter("Target X", -1.0, 1.0, 1)
+y_slider = p.addUserDebugParameter("Target Y", -1.0, 1.0, 1)
+z_slider = p.addUserDebugParameter("Target Z", -1.0, 1.0, 1)
 
 roll_slider = p.addUserDebugParameter("Target Roll", -np.pi, np.pi, 0)
 pitch_slider = p.addUserDebugParameter("Target Pitch", -np.pi, np.pi, -np.pi / 2)
@@ -52,27 +63,27 @@ robot = SimRobot()
 
 if __name__ == "__main__":
     while True:
-        target_x = p.readUserDebugParameter(x_slider)
-        target_y = p.readUserDebugParameter(y_slider)
-        target_z = p.readUserDebugParameter(z_slider)
-        target_position = [target_x, target_y, target_z]
+        x = p.readUserDebugParameter(x_slider)
+        y = p.readUserDebugParameter(y_slider)
+        z = p.readUserDebugParameter(z_slider)
 
         target_roll = p.readUserDebugParameter(roll_slider)
         target_pitch = p.readUserDebugParameter(pitch_slider)
         target_yaw = p.readUserDebugParameter(yaw_slider)
 
+        arm_joints = [i for i in range(end_effector_link_index)]
+
+        # LEFT
         target_orientation = p.getQuaternionFromEuler(
             [target_roll, target_pitch, target_yaw]
         )
-
         pos = robot._get_ik(
-            target_position,
+            "left",
+            [x, y, z],
             target_orientation,
         )
-
-        arm_joints = [i for i in range(end_effector_link_index)]
         p.setJointMotorControlArray(
-            bodyIndex=robot_id,
+            bodyIndex=left_id,
             jointIndices=arm_joints,
             controlMode=p.POSITION_CONTROL,
             targetPositions=[
@@ -84,6 +95,29 @@ if __name__ == "__main__":
             ],
             forces=[100.0] * len(arm_joints),
         )
+
+        # RIGHT
+        # target_orientation = p.getQuaternionFromEuler(
+        #     [target_roll, target_pitch, target_yaw]
+        # )
+        # pos = robot._get_ik(
+        #     "right",
+        #     [x, y, z],
+        #     target_orientation,
+        # )
+        # p.setJointMotorControlArray(
+        #     bodyIndex=right_id,
+        #     jointIndices=arm_joints,
+        #     controlMode=p.POSITION_CONTROL,
+        #     targetPositions=[
+        #         pos.shoulder_pan,
+        #         pos.shoulder_lift,
+        #         pos.elbow_flex,
+        #         pos.wrist_flex,
+        #         pos.wrist_roll,
+        #     ],
+        #     forces=[100.0] * len(arm_joints),
+        # )
 
         gripper_pos = None
         keys = p.getKeyboardEvents()
@@ -98,7 +132,7 @@ if __name__ == "__main__":
 
         if gripper_pos is not None and gripper_id is not None:
             p.setJointMotorControl2(
-                robot_id,
+                left_id,
                 gripper_id,
                 p.POSITION_CONTROL,
                 targetPosition=gripper_pos,
