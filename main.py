@@ -1,13 +1,7 @@
+import dataclasses
 from typing import Any
 import json
-from modules.arms import connect_arms, disconnect_arms, set_gripper_pos
 from modules.camera import create_local_tracks, stop_camera
-from modules.wheels import (
-    control,
-    get_status,
-    start_odrive,
-    cleanup_motors,
-)
 import asyncio
 from aiohttp import web
 from aiortc import (
@@ -16,9 +10,9 @@ from aiortc import (
     RTCDataChannel,
 )
 
+from robots.v1 import ArmPosition, RobotV1
 
-start_odrive()
-connect_arms()
+robot = RobotV1()
 
 routes = web.RouteTableDef()
 
@@ -42,9 +36,8 @@ def send_to_all(type, data):
 
 async def status_monitor():
     while True:
-        voltage, current, uptime = get_status()
-        data = {"voltage": voltage, "current": current, "uptime": uptime}
-        send_to_all("status", data)
+        status = robot.status()
+        send_to_all("status", dataclasses.asdict(status))
         await asyncio.sleep(5)
 
 
@@ -87,21 +80,31 @@ async def offer(request: web.Request) -> web.Response:
                 data = msg["data"]
 
                 if msg["type"] == "control":
-                    control(x=data["x"], y=data["y"], speed=data["speed"])
+                    robot.move_with_joystick(
+                        x=data["x"], y=data["y"], speed=data["speed"]
+                    )
                 if msg["type"] == "vr":
                     joystick = None
                     if "left" in data:
                         controller = data["left"]
                         joystick = controller["joystick"]
-                        set_gripper_pos("left", (controller["trigger"] - 1) * -1)
+                        robot.move_arm(
+                            "left",
+                            # TODO: convert to deg
+                            ArmPosition(gripper=(controller["trigger"] - 1) * -1),
+                        )
 
                     if "right" in data:
                         controller = data["right"]
                         joystick = controller["joystick"]
-                        set_gripper_pos("right", (controller["trigger"] - 1) * -1)
+                        robot.move_arm(
+                            "right",
+                            # TODO: convert to deg
+                            ArmPosition(gripper=(controller["trigger"] - 1) * -1),
+                        )
 
                     if joystick:
-                        control(
+                        robot.move_with_joystick(
                             x=joystick["x"],
                             y=joystick["y"] * -1,
                             speed=0.4,
@@ -131,14 +134,12 @@ async def offer(request: web.Request) -> web.Response:
 
 
 async def on_shutdown(app: Any) -> None:
-    cleanup_motors()
     coros = [pc.close() for pc in pcs]
     await asyncio.gather(*coros)
     pcs.clear()
     data_channels.clear()
-
+    robot.stop()
     stop_camera()
-    disconnect_arms()
 
 
 if __name__ == "__main__":

@@ -3,6 +3,8 @@ import odrive
 import time
 from odrive.enums import AXIS_STATE_IDLE, AXIS_STATE_CLOSED_LOOP_CONTROL
 
+from robots import Status
+
 # Global variables for cleanup
 odrv0 = None
 axis0 = None
@@ -11,11 +13,11 @@ axis1 = None
 start_time = time.time()
 
 
-def get_status():
+def get_status() -> Status:
     uptime = int(time.time() - start_time)
 
     if not odrv0 or not axis0 or not axis1:
-        return 0, 0, uptime
+        return Status(0.0, 0.0, uptime)
 
     voltage = odrv0.vbus_voltage
     currents = [
@@ -23,7 +25,7 @@ def get_status():
         axis1.motor.current_control.Iq_measured,
     ]
     current = max(abs(current) for current in currents) if currents else 0
-    return voltage, current, uptime
+    return Status(voltage, current, uptime)
 
 
 def cleanup_motors():
@@ -58,7 +60,7 @@ def move(left, right, speed):
         axis0.controller.input_vel = right * speed
         axis1.controller.input_vel = left * -1 * speed
 
-        
+
 def control(x, y, speed):
     left = y + x
     right = y - x
@@ -67,4 +69,3 @@ def control(x, y, speed):
     right = max(-1, min(1, right))
 
     move(left=left, right=right, speed=speed)
-
