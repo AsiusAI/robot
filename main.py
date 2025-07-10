@@ -2,7 +2,6 @@ import dataclasses
 import math
 from typing import Any, List
 import json
-from modules.camera import create_local_tracks, stop_camera
 import asyncio
 from aiohttp import web
 from aiortc import (
@@ -129,7 +128,7 @@ async def offer(request: web.Request) -> web.Response:
             except Exception as e:
                 print(e)
 
-    audio, video = create_local_tracks()
+    audio, video = robot.get_media_stream()
 
     if audio:
         pc.addTrack(audio)
@@ -156,7 +155,6 @@ async def on_shutdown(app: Any) -> None:
     pcs.clear()
     data_channels.clear()
     robot.stop()
-    stop_camera()
 
 
 if __name__ == "__main__":

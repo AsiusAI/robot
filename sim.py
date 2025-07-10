@@ -7,10 +7,9 @@ from robots.sim import SimRobot
 
 physicsClient = p.connect(p.GUI)
 p.setAdditionalSearchPath(pybullet_data.getDataPath())
-
 p.setGravity(0, 0, -9.81)
 planeId = p.loadURDF("plane.urdf")
-# Position the left arm at origin, facing right
+
 left_id = p.loadURDF(
     "sim/SO101/so101_new_calib.urdf",
     basePosition=[0.0, 0.08, 0.5],
@@ -18,7 +17,6 @@ left_id = p.loadURDF(
     useFixedBase=True,
 )
 
-# Position the right arm 20cm to the right, facing left (rotated 180 degrees around Z-axis)
 right_id = p.loadURDF(
     "sim/SO101/so101_new_calib.urdf",
     basePosition=[0.0, 0.0, 0.5],
@@ -27,9 +25,7 @@ right_id = p.loadURDF(
 )
 
 num_joints = p.getNumJoints(left_id)
-
 end_effector = "gripper_frame_joint"
-end_effector_link_index = 5  # gripper_frame_joint
 
 
 def find_joint(name):
@@ -71,7 +67,7 @@ if __name__ == "__main__":
         target_pitch = p.readUserDebugParameter(pitch_slider)
         target_yaw = p.readUserDebugParameter(yaw_slider)
 
-        arm_joints = [i for i in range(end_effector_link_index)]
+        arm_joints = [0, 1, 2, 3, 4]
 
         # LEFT
         target_orientation = p.getQuaternionFromEuler(

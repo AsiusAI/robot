@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Literal, Optional, Union
 
+from aiortc import MediaStreamTrack
 import placo
 import numpy as np
 import placo
@@ -46,6 +47,11 @@ class Robot:
         raise Exception("Not implemented!")
 
     def status(self):
+        raise Exception("Not implemented!")
+
+    def get_media_stream(
+        self,
+    ) -> tuple[Optional[MediaStreamTrack], Optional[MediaStreamTrack]]:
         raise Exception("Not implemented!")
 
     def move_with_joystick(self, x: float, y: float, speed: float):
