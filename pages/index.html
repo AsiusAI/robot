@@ -582,12 +582,12 @@
           context.fillText(`🚀 Speed: ${document.getElementById("speed-value").textContent}`, 20, 160);
           const fmt = (num) => num.toFixed(2);
           const pos = (pos) => `x=${fmt(pos.x)}, y=${fmt(pos.y)}, z=${fmt(pos.z)}, w=${fmt(pos.w)}`;
-          
+
           if (frameData.right) {
             context.fillText(`Right pos: ${pos(frameData.right.pos)}`, 20, 180);
             context.fillText(`Right rot: ${pos(frameData.right.rot)}`, 20, 200);
           }
-          
+
           if (frameData.left) {
             context.fillText(`Left pos: ${pos(frameData.left.pos)}`, 20, 220);
             context.fillText(`Left rot: ${pos(frameData.left.rot)}`, 20, 240);
@@ -644,9 +644,7 @@
           if (gamepad) {
             trigger = gamepad.buttons[0]?.value ?? null;
 
-            if (gamepad.axes.length >= 4) {
-              joystick = { x: gamepad.axes[2], y: gamepad.axes[3] };
-            }
+            if (gamepad.axes.length >= 4) joystick = { x: gamepad.axes[2], y: gamepad.axes[3] };
           }
 
           frameData[handedness] = { pos, rot, trigger, joystick };

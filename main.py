@@ -1,4 +1,5 @@
 import dataclasses
+import math
 from typing import Any
 import json
 from modules.camera import create_local_tracks, stop_camera
@@ -10,9 +11,10 @@ from aiortc import (
     RTCDataChannel,
 )
 
-from robots.v1 import ArmPosition, RobotV1
+from robots.v1 import RobotV1
 
 robot = RobotV1()
+robot.start()
 
 routes = web.RouteTableDef()
 
@@ -88,20 +90,19 @@ async def offer(request: web.Request) -> web.Response:
                     if "left" in data:
                         controller = data["left"]
                         joystick = controller["joystick"]
-                        robot.move_arm(
-                            "left",
-                            # TODO: convert to deg
-                            ArmPosition(gripper=(controller["trigger"] - 1) * -1),
-                        )
 
                     if "right" in data:
                         controller = data["right"]
                         joystick = controller["joystick"]
-                        robot.move_arm(
-                            "right",
-                            # TODO: convert to deg
-                            ArmPosition(gripper=(controller["trigger"] - 1) * -1),
-                        )
+                        if controller["pos"]:
+                            pos = controller["pos"]
+                            rot = controller["rot"]
+                            res = robot._get_ik(
+                                [pos["x"], pos["y"], pos["z"]],
+                                [rot["x"], rot["y"], rot["z"], rot["w"]],
+                            )
+                            res.gripper = (controller["trigger"] - 1) * -(math.pi / 2)
+                            robot.move_arm("right", res)
 
                     if joystick:
                         robot.move_with_joystick(

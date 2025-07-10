@@ -24,7 +24,6 @@ class ArmPosition:
     gripper: Optional[float] = None
 
 
-type Arm = Literal["left", "right"]
 robot = placo.RobotWrapper(
     "sim/SO101/so101_new_calib.urdf",
 )
@@ -58,7 +57,7 @@ class Robot:
 
         self.move(left=left, right=right, speed=speed)
 
-    def move_arm(self, arm: Arm, pos: ArmPosition):
+    def move_arm(self, arm: Literal["left", "right"], pos: ArmPosition):
         raise Exception("Not implemented!")
 
     def _get_ik(self, position: List[float], orientation: List[float]):
@@ -72,7 +71,10 @@ class Robot:
         return ArmPosition(*robot.state.q[7:])
 
     def move_arm_with_ik(
-        self, arm: Arm, position: List[float], orientation: List[float]
+        self,
+        arm: Literal["left", "right"],
+        position: List[float],
+        orientation: List[float],
     ):
         pos = self._get_ik(position, orientation)
         return self.move_arm(arm, pos)

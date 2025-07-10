@@ -1,6 +1,7 @@
+from typing import Literal
 from modules.arms import connect_arms, disconnect_arms, move_arm
 from modules.wheels import cleanup_motors, get_status, move, start_odrive
-from robots import Arm, ArmPosition, Robot
+from robots import ArmPosition, Robot
 
 
 class RobotV1(Robot):
@@ -15,7 +16,7 @@ class RobotV1(Robot):
     def move(self, left, right, speed):
         move(left=left, right=right, speed=speed)
 
-    def move_arm(self, arm: Arm, pos: ArmPosition):
+    def move_arm(self, arm: Literal["left", "right"], pos: ArmPosition):
         move_arm(arm, pos)
 
     def status(self):
