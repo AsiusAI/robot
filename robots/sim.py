@@ -2,10 +2,10 @@ import dataclasses
 from typing import Literal, Optional
 import numpy as np
 from aiortc import MediaStreamTrack
+from numpy.typing import NDArray
 from robots import ArmPosition, Robot, Status
 import pybullet as p
 import time
-from queue import Queue
 import threading
 import pybullet_data
 from aiortc import VideoStreamTrack
@@ -14,8 +14,10 @@ import av
 
 class SimRobot(Robot):
     def __init__(self):
-        self.command_queue = Queue()
-        self.image_queue = Queue()
+        self.left_arm_queue: Optional[dict] = None
+        self.right_arm_queue: Optional[dict] = None
+        self.move_queue: Optional[dict] = None
+        self.image_queue: Optional[NDArray] = None
         self.running = True
         self.start_time = time.time()
 
@@ -26,7 +28,7 @@ class SimRobot(Robot):
         self.running = False
 
     def run_sim_loop(self):
-        p.connect(p.GUI)
+        p.connect(p.DIRECT)
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
         p.setGravity(0, 0, -9.81)
         p.loadURDF("plane.urdf")
@@ -46,70 +48,63 @@ class SimRobot(Robot):
             ),
         }
 
+        view_matrix = p.computeViewMatrixFromYawPitchRoll(
+            cameraTargetPosition=[0, 0.04, 0.5],
+            distance=1,
+            yaw=-90,
+            pitch=-20,
+            roll=0,
+            upAxisIndex=2,
+        )
+        projection_matrix = p.computeProjectionMatrixFOV(
+            fov=60,
+            aspect=640 / 480,
+            nearVal=0.1,
+            farVal=10.0,
+        )
+        frame_counter = 0
         while self.running:
-            try:
-                cmd = self.command_queue.get_nowait()
-                if cmd["type"] == "move_arm":
-                    # the actual sim command
-                    arm_joints = [0, 1, 2, 3, 4, 6]
-                    pos = ArmPosition(**cmd["pos"])
-                    p.setJointMotorControlArray(
-                        bodyIndex=arms[cmd["arm"]],
-                        jointIndices=arm_joints,
-                        controlMode=p.POSITION_CONTROL,
-                        targetPositions=[
-                            pos.shoulder_pan,
-                            pos.shoulder_lift,
-                            pos.elbow_flex,
-                            pos.wrist_flex,
-                            pos.wrist_roll,
-                            pos.gripper,
-                        ],
-                        forces=[100.0] * len(arm_joints),
-                    )
-                    pass
-                if cmd["type"] == "move":
-                    print("Not implemented!")
-                    pass
-            except:
+            for queue in [self.left_arm_queue, self.right_arm_queue]:
+                if queue == None:
+                    continue
+                print(queue)
+                # the actual sim command
+                pos = ArmPosition(**queue["pos"])
+                positions = {
+                    0: pos.shoulder_pan,
+                    1: pos.shoulder_lift,
+                    2: pos.elbow_flex,
+                    3: pos.wrist_flex,
+                    4: pos.wrist_roll,
+                    6: pos.gripper,
+                }
+                positions = {k: v for k, v in positions.items() if v is not None}
+                p.setJointMotorControlArray(
+                    bodyIndex=arms[queue["arm"]],
+                    jointIndices=positions.keys(),
+                    controlMode=p.POSITION_CONTROL,
+                    targetPositions=positions.values(),
+                    forces=[100.0] * len(positions),
+                )
+            self.left_arm_queue = None
+            self.right_arm_queue = None
+
+            if self.move_queue:
+                self.move_queue = None
                 pass
 
             p.stepSimulation()
-            time.sleep(1.0 / 240.0)
-
-            view_matrix = p.computeViewMatrixFromYawPitchRoll(
-                cameraTargetPosition=[0, 0.04, 0.5],
-                distance=1,
-                yaw=-90,
-                pitch=-20,
-                roll=0,
-                upAxisIndex=2,
-            )
-
-            projection_matrix = p.computeProjectionMatrixFOV(
-                fov=60,
-                aspect=640 / 480,
-                nearVal=0.1,
-                farVal=10.0,
-            )
-
-            width, height, rgb, _, _ = p.getCameraImage(
-                width=640,
-                height=480,
-                viewMatrix=view_matrix,
-                projectionMatrix=projection_matrix,
-                renderer=p.ER_BULLET_HARDWARE_OPENGL,
-            )
-
-            self.image_queue.put(np.array(rgb).reshape(height, width, 4)[:, :, :3])
-
-    def send_command(self, command: dict):
-        self.command_queue.put(command)
-
-    def get_latest_image(self):
-        if not self.image_queue.empty():
-            return self.image_queue.get()
-        return None
+            time.sleep(1.0 / 120.0)
+            frame_counter += 1
+            if frame_counter % 4 == 0:
+                width, height, rgb, _, _ = p.getCameraImage(
+                    width=640,
+                    height=480,
+                    viewMatrix=view_matrix,
+                    projectionMatrix=projection_matrix,
+                    renderer=p.ER_BULLET_HARDWARE_OPENGL,
+                )
+                self.image_queue = np.array(rgb).reshape(height, width, 4)[:, :, :3]
 
     def status(self):
         return Status(0.0, 0.0, int(time.time() - self.start_time))
@@ -120,14 +115,13 @@ class SimRobot(Robot):
         return None, SimVideoTrack(self)
 
     def move(self, left: float, right: float, speed: float):
-        self.send_command(
-            {"type": "move", "left": left, "right": right, "speed": speed}
-        )
+        self.move_queue = {"left": left, "right": right, "speed": speed}
 
     def move_arm(self, arm: Literal["left", "right"], pos: ArmPosition):
-        self.send_command(
-            {"type": "move_arm", "arm": arm, "pos": dataclasses.asdict(pos)}
-        )
+        if arm == "left":
+            self.left_arm_queue = {"arm": arm, "pos": dataclasses.asdict(pos)}
+        if arm == "right":
+            self.right_arm_queue = {"arm": arm, "pos": dataclasses.asdict(pos)}
 
 
 class SimVideoTrack(VideoStreamTrack):
@@ -137,7 +131,7 @@ class SimVideoTrack(VideoStreamTrack):
 
     async def recv(self):
         try:
-            img = self.sim.get_latest_image()
+            img = self.sim.image_queue
             frame = av.VideoFrame.from_ndarray(np.array(img, np.uint8), format="rgb24")
             frame.pts, frame.time_base = await self.next_timestamp()
             return frame

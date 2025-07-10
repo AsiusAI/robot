@@ -38,24 +38,24 @@ solver.dt = 0.01
 
 class Robot:
     def start(self):
-        raise Exception("Not implemented!")
+        raise Exception("start() not implemented!")
 
     def stop(self):
-        raise Exception("Not implemented!")
+        raise Exception("stop() not implemented!")
 
     def status(self):
-        raise Exception("Not implemented!")
+        raise Exception("status() not implemented!")
 
     def move(self, left: float, right: float, speed: float):
-        raise Exception("Not implemented!")
+        raise Exception("move() not implemented!")
 
     def get_media_stream(
         self,
     ) -> tuple[Optional[MediaStreamTrack], Optional[MediaStreamTrack]]:
-        raise Exception("Not implemented!")
+        raise Exception("get_media_stream() not implemented!")
 
     def move_arm(self, arm: Literal["left", "right"], pos: ArmPosition):
-        raise Exception("Not implemented!")
+        raise Exception("move_arm() not implemented!")
 
     def move_with_joystick(self, x: float, y: float, speed: float):
         left = y + x

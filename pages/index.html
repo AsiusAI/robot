@@ -634,7 +634,8 @@
           const pose = frame.getPose(input.gripSpace, refSpace);
           if (!pose) continue;
 
-          const pos = pose.transform.position;
+          const vrPos = pose.transform.position
+          const pos = vrPos ? { x: -vrPos.z, y: vrPos.x, z: vrPos.y ,w:1} : undefined
           const rot = pose.transform.orientation;
 
           const gamepad = input.gamepad;

@@ -30,6 +30,8 @@ def send_message(pc, type, data):
 
 
 def send_to_all(type, data):
+    if len(pcs) == 0:
+        return
     print(f"Sending {type} {data} to {len(pcs)} clients")
     for pc in pcs:
         send_message(pc, type, data)
@@ -45,11 +47,6 @@ async def status_monitor():
 @routes.get("/")
 async def index(req: web.Request):
     return web.Response(content_type="text/html", text=open("pages/index.html").read())
-
-
-def vr_to_robot_coords(vr_position: List[float]):
-    x, y, z = vr_position
-    return [-z, -x, y]
 
 
 @routes.post("/offer")
@@ -91,33 +88,21 @@ async def offer(request: web.Request) -> web.Response:
                     )
                 if msg["type"] == "vr":
                     joystick = None
-                    if "left" in data:
-                        controller = data["left"]
+                    for side in ["left", "right"]:
+                        if side not in data:
+                            continue
+                        controller = data[side]
                         joystick = controller["joystick"]
                         if controller["pos"]:
                             pos = controller["pos"]
                             rot = controller["rot"]
                             res = robot._get_ik(
-                                "left",
-                                vr_to_robot_coords([pos["x"], pos["y"], pos["z"]]),
+                                side,
+                                [pos["x"], pos["y"], pos["z"]],
                                 [rot["x"], rot["y"], rot["z"], rot["w"]],
                             )
                             res.gripper = (controller["trigger"] - 1) * -(math.pi / 2)
-                            robot.move_arm("left", res)
-
-                    if "right" in data:
-                        controller = data["right"]
-                        joystick = controller["joystick"]
-                        if controller["pos"]:
-                            pos = controller["pos"]
-                            rot = controller["rot"]
-                            res = robot._get_ik(
-                                "right",
-                                vr_to_robot_coords([pos["x"], pos["y"], pos["z"]]),
-                                [rot["x"], rot["y"], rot["z"], rot["w"]],
-                            )
-                            res.gripper = (controller["trigger"] - 1) * -(math.pi / 2)
-                            robot.move_arm("right", res)
+                            robot.move_arm(side, res)
 
                     if joystick:
                         robot.move_with_joystick(
