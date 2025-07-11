@@ -5,7 +5,7 @@ from aiortc import MediaStreamTrack
 import placo
 import numpy as np
 import placo
-from scipy.spatial.transform import Rotation
+from scipy.spatial.transform import Rotation as R
 
 
 @dataclass
@@ -32,20 +32,18 @@ left_robot = placo.RobotWrapper(
 )
 left_solver = placo.KinematicsSolver(left_robot)
 left_solver.mask_fbase(True)
-left_task = left_solver.add_frame_task("gripper_frame_joint", np.eye(4))
-left_task.configure("effector", "soft", 3.0, 1.0)
-left_solver.enable_velocity_limits(True)
-left_solver.dt = 0.01
+left_task = left_solver.add_frame_task("gripper_frame_link", np.eye(4))
+left_task.configure("gripper_frame_link", "soft", 1.0, 0.01)
+# left_solver.dt = 0.01
 
 right_robot = placo.RobotWrapper(
     "sim/SO101/so101_new_calib.urdf",
 )
 right_solver = placo.KinematicsSolver(right_robot)
 right_solver.mask_fbase(True)
-right_task = right_solver.add_frame_task("gripper_frame_joint", np.eye(4))
-right_task.configure("effector", "soft", 3.0, 1.0)
-right_solver.enable_velocity_limits(True)
-right_solver.dt = 0.01
+right_task = right_solver.add_frame_task("gripper_frame_link", np.eye(4))
+right_task.configure("gripper_frame_link", "soft", 1.0, 0.01)
+# right_solver.dt = 0.01
 
 
 class Robot:
@@ -84,17 +82,17 @@ class Robot:
         position: List[float],
         orientation: List[float],
     ):
-        # pX, pY, pZ = position
-        # oX, oY, oZ, oW = orientation
-        # if arm == "left":
-        #     position = [pX, -pZ, pY]
-        #     orientation = [oX, -oZ, oY, oW]
-        # if arm == "right":
-        #     position = [pX, pZ, -pY]
-        #     orientation = [oX, oZ, -oY, oW]
+        # Converting from WebXR to pybullet coordinate system
+        pX, pY, pZ = position
+        position = [-pZ, -pX, pY]
+
+        q1 = R.from_quat([0.5, -0.5, -0.5, 0.5])
+        q2 = R.from_quat(orientation)
+        q3 = R.from_quat([1, 0, 0, 0])
+        orientation = (q1 * q2 * q3).as_quat()
 
         T_world_frame = np.eye(4)
-        rotation = Rotation.from_quat(orientation)
+        rotation = R.from_quat(orientation)
         T_world_frame[:3, :3] = rotation.as_matrix()
         T_world_frame[:3, 3] = position
         if arm == "left":

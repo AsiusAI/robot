@@ -76,7 +76,7 @@ class SimRobot(Robot):
                 pos = ArmPosition(**queue["pos"])
 
                 # debug line
-                end_pos = np.array(pos.position) + np.array(
+                end_pos = np.array(pos.position) + 4 * np.array(
                     R.from_quat(pos.orientation).apply([0, 0, 1])
                 )
                 line = p.addUserDebugLine(
