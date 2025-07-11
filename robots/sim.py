@@ -29,7 +29,7 @@ class SimRobot(Robot):
         self.running = False
 
     def run_sim_loop(self):
-        p.connect(p.GUI)
+        p.connect(p.DIRECT)
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
         p.setGravity(0, 0, -9.81)
         p.loadURDF("plane.urdf")
@@ -69,11 +69,11 @@ class SimRobot(Robot):
             if line:
                 p.removeUserDebugItem(line)
                 line = None
-            for queue in [self.left_arm_queue, self.right_arm_queue]:
-                if queue == None:
+            for arm_queue in [self.left_arm_queue, self.right_arm_queue]:
+                if arm_queue == None:
                     continue
 
-                pos = ArmPosition(**queue["pos"])
+                pos = ArmPosition(**arm_queue["pos"])
 
                 # debug line
                 end_pos = np.array(pos.position) + 4 * np.array(
@@ -93,7 +93,7 @@ class SimRobot(Robot):
                 }
                 positions = {k: v for k, v in positions.items() if v is not None}
                 p.setJointMotorControlArray(
-                    bodyIndex=arms[queue["arm"]],
+                    bodyIndex=arms[arm_queue["arm"]],
                     jointIndices=positions.keys(),
                     controlMode=p.POSITION_CONTROL,
                     targetPositions=positions.values(),
