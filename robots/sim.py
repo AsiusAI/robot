@@ -37,7 +37,7 @@ class SimRobot(Robot):
         arms = {
             "left": p.loadURDF(
                 "sim/SO101/so101_new_calib.urdf",
-                basePosition=[0.0, 0.5, 0.5],
+                basePosition=[0.0, 0.08, 0.5],
                 # baseOrientation=p.getQuaternionFromEuler([-np.pi / 2, 0, 0]),
                 useFixedBase=True,
             ),

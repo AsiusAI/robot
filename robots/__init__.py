@@ -47,6 +47,7 @@ right_task.configure("gripper_frame_link", "soft", 1.0, 0.01)
 right_solver.enable_velocity_limits(True)
 right_solver.dt = 0.01
 
+
 class Robot:
     def start(self):
         raise Exception("start() not implemented!")
@@ -87,10 +88,7 @@ class Robot:
         pX, pY, pZ = position
         position = [-pZ, -pX, pY]
 
-        q1 = R.from_quat([0.5, -0.5, -0.5, 0.5])
-        q2 = R.from_quat(orientation)
-        q3 = R.from_quat([1, 0, 0, 0])
-        rotation = (q1 * q2 * q3)
+        rotation = R.from_quat([0.5, -0.5, 0.5, -0.5]) * R.from_quat(orientation)
         orientation = rotation.as_quat()
 
         T_world_frame = np.eye(4)
