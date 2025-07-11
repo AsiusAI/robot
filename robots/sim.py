@@ -10,6 +10,7 @@ import threading
 import pybullet_data
 from aiortc import VideoStreamTrack
 import av
+from scipy.spatial.transform import Rotation as R
 
 
 class SimRobot(Robot):
@@ -28,7 +29,7 @@ class SimRobot(Robot):
         self.running = False
 
     def run_sim_loop(self):
-        p.connect(p.DIRECT)
+        p.connect(p.GUI)
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
         p.setGravity(0, 0, -9.81)
         p.loadURDF("plane.urdf")
@@ -36,14 +37,14 @@ class SimRobot(Robot):
         arms = {
             "left": p.loadURDF(
                 "sim/SO101/so101_new_calib.urdf",
-                basePosition=[0.0, 0.08, 0.5],
-                baseOrientation=p.getQuaternionFromEuler([-np.pi / 2, 0, 0]),
+                basePosition=[0.0, 0.5, 0.5],
+                # baseOrientation=p.getQuaternionFromEuler([-np.pi / 2, 0, 0]),
                 useFixedBase=True,
             ),
             "right": p.loadURDF(
                 "sim/SO101/so101_new_calib.urdf",
                 basePosition=[0.0, 0.0, 0.5],
-                baseOrientation=p.getQuaternionFromEuler([np.pi / 2, 0, 0]),
+                # baseOrientation=p.getQuaternionFromEuler([np.pi / 2, 0, 0]),
                 useFixedBase=True,
             ),
         }
@@ -63,13 +64,25 @@ class SimRobot(Robot):
             farVal=10.0,
         )
         frame_counter = 0
+        line = None
         while self.running:
+            if line:
+                p.removeUserDebugItem(line)
+                line = None
             for queue in [self.left_arm_queue, self.right_arm_queue]:
                 if queue == None:
                     continue
-                print(queue)
-                # the actual sim command
+
                 pos = ArmPosition(**queue["pos"])
+
+                # debug line
+                end_pos = np.array(pos.position) + np.array(
+                    R.from_quat(pos.orientation).apply([0, 0, 1])
+                )
+                line = p.addUserDebugLine(
+                    pos.position, end_pos.tolist(), [1, 0, 0], lineWidth=2, lifeTime=0
+                )
+
                 positions = {
                     0: pos.shoulder_pan,
                     1: pos.shoulder_lift,
