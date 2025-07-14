@@ -12,3 +12,5 @@ sudo systemctl enable robot.service
 sudo systemctl disable robot-webcam.service
 sudo rm -f /etc/systemd/system/robot.service
 ```
+
+[BOM Sheets](https://docs.google.com/spreadsheets/d/1ZaKwszU7OfP2QDUP3J89k1ooDT7O5iXCyGr-KMcQ8w8/edit?usp=sharing)
