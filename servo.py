@@ -490,7 +490,7 @@ class PortHandler(object):
 
 
 if __name__ == "__main__":
-    ID = 1
+    ID = 6
     servo = STS3215()
     port = PortHandler("/dev/ttyAMA0")
     conn = Connection(0, port)
@@ -502,6 +502,16 @@ if __name__ == "__main__":
     if not port.setBaudRate(1_000_000):
         print("Setting baud rate failed")
         exit()
+
+    def find_servos():
+        found = []
+        for id in range(0, 0xFE):
+            _, res, err = conn.ping(id)
+            if res == COMM_SUCCESS:
+                found.append(id)
+        return found
+
+    # print(f"found: {find_servos()}")
 
     def move(pos: int):
         print(f"moving to {pos}")
