@@ -490,7 +490,6 @@ class PortHandler(object):
 
 
 if __name__ == "__main__":
-    ID = 6
     servo = STS3215()
     port = PortHandler("/dev/ttyAMA0")
     conn = Connection(0, port)
@@ -508,31 +507,50 @@ if __name__ == "__main__":
         for id in range(0, 0xFE):
             _, res, err = conn.ping(id)
             if res == COMM_SUCCESS:
+                print(id)
                 found.append(id)
         return found
 
-    # print(f"found: {find_servos()}")
+    def set_new_id(old_id, new_id):
+        print(conn.write(old_id, servo.TORQUE_ENABLE, 0))
+        print(conn.write(old_id, servo.LOCK, 0))
+        print(conn.write(old_id, servo.ID, new_id))
+        print(conn.write(new_id, servo.LOCK, 1))
 
-    def move(pos: int):
+    # found = find_servos()
+    # print(f"found: {found}")
+
+    JOINTS = [21, 22, 23, 24, 25, 26, 27]
+
+    def get_current_pos(id):
+        current_pos, res, error = conn.read(id, servo.PRESENT_POSITION)
+        return current_pos if res == COMM_SUCCESS else 0
+
+    def move(id, pos: int, sleep=3):
         print(f"moving to {pos}")
-        conn.write(ID, servo.GOAL_POSITION, pos)
-        time.sleep(1)
-        current_pos, res, error = conn.read(ID, servo.PRESENT_POSITION)
-        print(current_pos)
+        conn.write(id, servo.GOAL_POSITION, pos)
+        time.sleep(sleep)
+        current_pos = get_current_pos(id)
+        print(f"{current_pos=}")
 
-    min_pos, result, error = conn.read(ID, servo.MIN_POSITION_LIMIT)
-    print(f"Min Position Limit: {min_pos}, result={result}, error={error}")
+    def start(id):
+        conn.write(id, servo.TORQUE_ENABLE, 1)
+        conn.write(id, servo.ACCELERATION, 0xFF)
+        conn.write(id, servo.GOAL_VELOCITY, 0xFFFF)
 
-    max_pos, result, error = conn.read(ID, servo.MAX_POSITION_LIMIT)
-    print(f"Max Position Limit: {max_pos}, result={result}, error={error}")
+    def stop(id):
+        conn.write(id, servo.TORQUE_ENABLE, 0)
 
     try:
-        conn.write(ID, servo.TORQUE_ENABLE, 1)
-        conn.write(ID, servo.ACCELERATION, 0xFF)
-        conn.write(ID, servo.GOAL_VELOCITY, 0xFFFF)
+        for joint in JOINTS:
+            start(joint)
 
-        move(min_pos)
-        move(max_pos)
+        id = JOINTS[0]
+        pos = get_current_pos(id)
+
+        # move(id, pos + 300)
+        move(id, pos + 3000)
     finally:
-        conn.write(ID, servo.TORQUE_ENABLE, 0)
+        for joint in JOINTS:
+            stop(joint)
         port.closePort()
