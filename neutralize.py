@@ -1,10 +1,9 @@
 from servos import STS3215, SCS0009
-from servo import PortHandler, Connection
+from servo import PortHandler, ServoConnection
 import time
 
 servo = SCS0009()
-port = PortHandler("/dev/tty.usbmodem5A7A0572801")
-conn = Connection(servo.BIG_ENDIAN, port)
+conn = ServoConnection("/dev/tty.usbmodem5A7A0572801",servo.BIG_ENDIAN)
 
 try:
     id = 1

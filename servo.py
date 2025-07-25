@@ -44,9 +44,9 @@ ERRBIT_OVERELE = 8
 ERRBIT_OVERLOAD = 32
 
 
-class Connection(object):
-    def __init__(self, protocol_end, port):
-        self.port = port
+class ServoConnection(object):
+    def __init__(self, port_name, protocol_end):
+        self.port = PortHandler(port_name)
         SCS_SETEND(protocol_end)
 
     def getProtocolVersion(self):
@@ -257,6 +257,14 @@ class Connection(object):
                 model_number = SCS_MAKEWORD(data_read[0], data_read[1])
 
         return model_number, result, error
+
+    def find_servos(self):
+        found = []
+        for id in range(0, 0xFE):
+            _, res, err = self.ping(id)
+            if res == COMM_SUCCESS:
+                found.append(id)
+        return found
 
     def readTxRx(self, scs_id, address, length):
         txpacket = [0] * 8

@@ -1,6 +1,6 @@
 import argparse
 import time
-from servo import COMM_SUCCESS, Connection, PortHandler
+from servo import COMM_SUCCESS, ServoConnection, PortHandler
 from servos import SCS0009
 
 parser = argparse.ArgumentParser(description="Set servo IDs")
@@ -9,16 +9,7 @@ parser.add_argument("new_id", type=int, nargs="?", help="New servo ID")
 args = parser.parse_args()
 
 servo = SCS0009()
-port = PortHandler("/dev/tty.usbmodem5A7A0572801")
-conn = Connection(0, port)
-
-def find_servos():
-    found = []
-    for id in range(0, 0xFE):
-        _, res, err = conn.ping(id)
-        if res == COMM_SUCCESS:
-            found.append(id)
-    return found
+conn = ServoConnection("/dev/tty.usbmodem5A7A0572801", servo.BIG_ENDIAN)
 
 
 def set_new_id(old_id, new_id):
@@ -28,7 +19,7 @@ def set_new_id(old_id, new_id):
     conn.write(new_id, servo.LOCK, 1)
 
 
-found = find_servos()
+found = conn.find_servos()
 print(f"{found=}")
 
 # Just setting one ID

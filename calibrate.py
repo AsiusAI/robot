@@ -1,10 +1,9 @@
 from servos import STS3215, SCS0009
-from servo import PortHandler, Connection
+from servo import PortHandler, ServoConnection
 import time
 
 servo = SCS0009()
-port = PortHandler("/dev/tty.usbmodem5A7A0572801")
-conn = Connection(servo.BIG_ENDIAN, port)
+conn = ServoConnection("/dev/tty.usbmodem5A7A0572801", servo.BIG_ENDIAN)
 
 SERVOS = [
     (31, 409, 588, True),
@@ -33,24 +32,28 @@ try:
         conn.write(id, servo.TORQUE_ENABLE, 1)
 
     for _ in range(3):
-      # Open hand
-      for id, min, max, reversed in SERVOS:
-          conn.write(id, servo.GOAL_POSITION, max if reversed else min)
-      time.sleep(2)
+        # Open hand
+        for id, min, max, reversed in SERVOS:
+            conn.write(id, servo.GOAL_POSITION, max if reversed else min)
+        time.sleep(2)
 
-      # Close hand
-      for id, min, max, reversed in SERVOS:
-          conn.write(id, servo.GOAL_POSITION, min if reversed else max)
-      time.sleep(2)
+        # Close hand
+        for id, min, max, reversed in SERVOS:
+            conn.write(id, servo.GOAL_POSITION, min if reversed else max)
+        time.sleep(2)
 
-      # Middle
-      for id, min, max, reversed in SERVOS:
-          conn.write(
-              id,
-              servo.GOAL_POSITION,
-              int(max + ((min - max) / 2)) if reversed else int(min + ((max - min) / 2)),
-          )
-      time.sleep(2)
+        # Middle
+        for id, min, max, reversed in SERVOS:
+            conn.write(
+                id,
+                servo.GOAL_POSITION,
+                (
+                    int(max + ((min - max) / 2))
+                    if reversed
+                    else int(min + ((max - min) / 2))
+                ),
+            )
+        time.sleep(2)
 
     # Stop
     for id, _, _, _ in SERVOS:
