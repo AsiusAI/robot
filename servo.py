@@ -45,8 +45,9 @@ ERRBIT_OVERLOAD = 32
 
 
 class ServoConnection(object):
-    def __init__(self, port_name):
-        self.port = PortHandler(port_name)
+    ENDIAN = 0
+    def __init__(self, port):
+        self.port = port
 
     def getProtocolVersion(self):
         return 1.0
@@ -233,7 +234,7 @@ class ServoConnection(object):
 
         return rxpacket, result, error
 
-    def ping(self, scs_id, endian):
+    def ping(self, scs_id):
         model_number = 0
         error = 0
 
@@ -253,14 +254,14 @@ class ServoConnection(object):
                 scs_id, 3, 2
             )  # Address 3 : Model Number
             if result == COMM_SUCCESS:
-                model_number = SCS_MAKEWORD(data_read[0], data_read[1], endian)
+                model_number = SCS_MAKEWORD(data_read[0], data_read[1], self.ENDIAN)
 
         return model_number, result, error
 
-    def find_servos(self,endian):
+    def find_servos(self):
         found = []
         for id in range(0, 0xFE):
-            _, res, err = self.ping(id, endian)
+            _, res, err = self.ping(id)
             if res == COMM_SUCCESS:
                 found.append(id)
         return found
@@ -295,7 +296,7 @@ class ServoConnection(object):
         if address[1] == 1:
             return data[0], result, error
 
-        return SCS_MAKEWORD(data[0], data[1]), result, error
+        return SCS_MAKEWORD(data[0], data[1], self.ENDIAN), result, error
 
     def writeTxOnly(self, scs_id, address, length, data):
         txpacket = [0] * (length + 7)
@@ -325,8 +326,8 @@ class ServoConnection(object):
 
         return result, error
 
-    def write(self, scs_id, address, data,endian):
-        data_write = [data] if address[1] == 1 else [SCS_LOBYTE(data, endian), SCS_HIBYTE(data, endian)]
+    def write(self, scs_id, address, data):
+        data_write = [data] if address[1] == 1 else [SCS_LOBYTE(data, self.ENDIAN), SCS_HIBYTE(data, self.ENDIAN)]
         return self.writeTxRx(scs_id, address[0], address[1], data_write)
 
 
@@ -377,7 +378,7 @@ def SCS_HIBYTE(w, endian):
         return w & 0xFF
 
 
-class PortHandler(object):
+class Port(object):
     def __init__(self, port_name):
         self.is_open = False
         self.baudrate = 1_000_000

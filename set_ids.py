@@ -1,6 +1,6 @@
 import argparse
 import time
-from servo import COMM_SUCCESS, ServoConnection, PortHandler
+from servo import COMM_SUCCESS, ServoConnection, Port
 from servos import get_servo
 
 parser = argparse.ArgumentParser(description="Set servo IDs")
@@ -10,15 +10,15 @@ parser.add_argument("id", type=int, nargs="?", default=1, help="Current servo ID
 parser.add_argument("new_id", type=int, nargs="?", help="New servo ID")
 args = parser.parse_args()
 
-servo = get_servo(args.servo)
-conn = ServoConnection(args.port)
+port = Port(args.port)
+conn = get_servo(args.servo,port)
 
 
 def set_new_id(id, new_id):
-    conn.write(id, servo.TORQUE_ENABLE, 0)
-    conn.write(id, servo.LOCK, 0)
-    conn.write(id, servo.ID, new_id)
-    conn.write(new_id, servo.LOCK, 1)
+    conn.write(id, conn.TORQUE_ENABLE, 0)
+    conn.write(id, conn.LOCK, 0)
+    conn.write(id, conn.ID, new_id)
+    conn.write(new_id, conn.LOCK, 1)
 
 
 found = conn.find_servos()
@@ -34,7 +34,7 @@ if args.new_id:
 print(f"Waiting for ID {args.id}...")
 while True:
     time.sleep(1)
-    _, res, err = conn.ping(args.id, servo.ENDIAN)
+    _, res, err = conn.ping(args.id)
     if res != COMM_SUCCESS:
         continue
 

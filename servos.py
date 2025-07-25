@@ -1,8 +1,8 @@
-from typing import Union
+from servo import Port, ServoConnection
 
 
-class STS3215:
-    ENDIAN = False # True for big endian and False for small
+class STS3215(ServoConnection):
+    ENDIAN = False  # True for big endian and False for small
     NEUTRAL_POS = 2048
 
     FIRMWARE_MAJOR_VERSION = (0, 1)
@@ -89,7 +89,7 @@ class STS3215:
 
 
 # http://doc.feetech.cn/#/prodinfodownload?srcType=FT-SCSCL-emanual-cbcc8ab2e3384282a01d4bf3
-class SCS0009:
+class SCS0009(ServoConnection):
     ENDIAN = True
     NEUTRAL_POS = 512
     # EPROM
@@ -159,5 +159,5 @@ class SCS0009:
     PROTOCOL = 1
 
 
-def get_servo(type: str):
-    return STS3215 if type == "STS3215" else SCS0009
+def get_servo(type: str, port: Port):
+    return STS3215(port) if type == "STS3215" else SCS0009(port)
