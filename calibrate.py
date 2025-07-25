@@ -6,15 +6,6 @@ servo = SCS0009()
 port = PortHandler("/dev/tty.usbmodem5A7A0572801")
 conn = Connection(servo.BIG_ENDIAN, port)
 
-if not port.openPort():
-    print("Failed to open the port")
-    exit()
-
-if not port.setBaudRate(1_000_000):
-    print("Setting baud rate failed")
-    exit()
-
-
 SERVOS = [
     (31, 409, 588, True),
     (32, 372, 786, True),

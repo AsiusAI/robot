@@ -384,7 +384,7 @@ def SCS_HIBYTE(w):
 class PortHandler(object):
     def __init__(self, port_name):
         self.is_open = False
-        self.baudrate = 1000000
+        self.baudrate = 1_000_000
         self.packet_start_time = 0.0
         self.packet_timeout = 0.0
         self.tx_time_per_byte = 0.0
@@ -392,6 +392,12 @@ class PortHandler(object):
         self.is_using = False
         self.port_name = port_name
         self.ser = None
+
+        if not self.openPort():
+            raise Exception("Failed to open the port!")
+
+        if not self.setBaudRate(self.baudrate):
+            raise Exception("Setting baud rate failed!")
 
     def openPort(self):
         return self.setBaudRate(self.baudrate)
