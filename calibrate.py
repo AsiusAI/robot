@@ -1,5 +1,5 @@
 import argparse
-from servos import STS3215, SCS0009
+from servos import get_servo
 from servo import ServoConnection
 import time
 
@@ -8,10 +8,10 @@ parser.add_argument("port", type=str, nargs="?", help="Port")
 parser.add_argument("servo", type=str, nargs="?", help="Servo (STS3215 or SCS0009)")
 args = parser.parse_args()
 
-servo = SCS0009 if args.servo == "SCS0009" else STS3215
-conn = ServoConnection(args.port, servo.BIG_ENDIAN)
+servo = get_servo(args.servo)
+conn = ServoConnection(args.port, servo.ENDIAN)
 
-print(conn.find_servos())
+print(conn.find_servos(servo.ENDIAN))
 
 while True:
     id = int(input("Servo ID: "))

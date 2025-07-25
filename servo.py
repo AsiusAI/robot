@@ -45,9 +45,8 @@ ERRBIT_OVERLOAD = 32
 
 
 class ServoConnection(object):
-    def __init__(self, port_name, protocol_end):
+    def __init__(self, port_name):
         self.port = PortHandler(port_name)
-        SCS_SETEND(protocol_end)
 
     def getProtocolVersion(self):
         return 1.0
@@ -162,7 +161,7 @@ class ServoConnection(object):
 
                     if rx_length < wait_length:
                         # check timeout
-                        if port.isPacketTimeout():
+                        if self.port.isPacketTimeout():
                             if rx_length == 0:
                                 result = COMM_RX_TIMEOUT
                             else:
@@ -234,7 +233,7 @@ class ServoConnection(object):
 
         return rxpacket, result, error
 
-    def ping(self, scs_id):
+    def ping(self, scs_id, endian):
         model_number = 0
         error = 0
 
@@ -254,14 +253,14 @@ class ServoConnection(object):
                 scs_id, 3, 2
             )  # Address 3 : Model Number
             if result == COMM_SUCCESS:
-                model_number = SCS_MAKEWORD(data_read[0], data_read[1])
+                model_number = SCS_MAKEWORD(data_read[0], data_read[1], endian)
 
         return model_number, result, error
 
-    def find_servos(self):
+    def find_servos(self,endian):
         found = []
         for id in range(0, 0xFE):
-            _, res, err = self.ping(id)
+            _, res, err = self.ping(id, endian)
             if res == COMM_SUCCESS:
                 found.append(id)
         return found
@@ -326,17 +325,9 @@ class ServoConnection(object):
 
         return result, error
 
-    def write(self, scs_id, address, data):
-        data_write = [data] if address[1] == 1 else [SCS_LOBYTE(data), SCS_HIBYTE(data)]
+    def write(self, scs_id, address, data,endian):
+        data_write = [data] if address[1] == 1 else [SCS_LOBYTE(data, endian), SCS_HIBYTE(data, endian)]
         return self.writeTxRx(scs_id, address[0], address[1], data_write)
-
-
-SCS_END = 0
-
-
-def SCS_SETEND(e):
-    global SCS_END
-    SCS_END = e
 
 
 def SCS_TOHOST(a, b):
@@ -353,9 +344,8 @@ def SCS_TOSCS(a, b):
         return a
 
 
-def SCS_MAKEWORD(a, b):
-    global SCS_END
-    if SCS_END == 0:
+def SCS_MAKEWORD(a, b, endian):
+    if endian == 0:
         return (a & 0xFF) | ((b & 0xFF) << 8)
     else:
         return (b & 0xFF) | ((a & 0xFF) << 8)
@@ -373,17 +363,15 @@ def SCS_HIWORD(l):
     return (l >> 16) & 0xFFFF
 
 
-def SCS_LOBYTE(w):
-    global SCS_END
-    if SCS_END == 0:
+def SCS_LOBYTE(w, endian):
+    if endian == 0:
         return w & 0xFF
     else:
         return (w >> 8) & 0xFF
 
 
-def SCS_HIBYTE(w):
-    global SCS_END
-    if SCS_END == 0:
+def SCS_HIBYTE(w, endian):
+    if endian == 0:
         return (w >> 8) & 0xFF
     else:
         return w & 0xFF

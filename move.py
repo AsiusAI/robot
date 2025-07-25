@@ -1,10 +1,14 @@
+import argparse
 import time
 from servo import COMM_SUCCESS, ServoConnection
 from servos import SCS0009, STS3215
 
+parser = argparse.ArgumentParser(description="Move")
+parser.add_argument("port", type=str, nargs="?", help="Port")
+parser.add_argument("new_id", type=int, nargs="?", help="New servo ID")
+args = parser.parse_args()
 
-servo = SCS0009()
-conn = ServoConnection("/dev/tty.usbmodem5A7A0572801", servo.BIG_ENDIAN)
+conn = ServoConnection(args.port)
 
 
 hand_servos = {
@@ -27,7 +31,7 @@ class Servo:
         self.type = type
         self.reverse = reverse
 
-        _, res, _ = conn.ping(id)
+        _, res, _ = conn.ping(id, type)
         if res != COMM_SUCCESS:
             raise Exception(f"Servo {id} not connected")
 
@@ -49,20 +53,19 @@ class Servo:
         return f"Servo(id={self.id}, name='{self.name}', type={self.type.__name__}, range=({self.min} → {self.max}), reverse={self.reverse})"
 
 
-class Hand:
+class Arm:
     def __init__(self, side, conn: ServoConnection):
-        type = SCS0009
         self.side = side
         start = 30 if self.side == "right" else 40
         self.conn = conn
 
         reverse = side == "right"
-        self.thumb_rotation = Servo(start + 1, "thumb_rotation", conn, type, reverse)
-        self.thumb = Servo(start + 2, "thumb", conn, type, reverse)
-        self.index = Servo(start + 3, "index", conn, type, reverse)
-        self.middle = Servo(start + 4, "middle", conn, type, not reverse)
-        self.ring = Servo(start + 5, "ring", conn, type, reverse)
-        self.little = Servo(start + 6, "little", conn, type, not reverse)
+        self.thumb_rotation = Servo(start + 1, "thumb_rotation", conn, SCS0009, reverse)
+        self.thumb = Servo(start + 2, "thumb", conn, SCS0009, reverse)
+        self.index = Servo(start + 3, "index", conn, SCS0009, reverse)
+        self.middle = Servo(start + 4, "middle", conn, SCS0009, not reverse)
+        self.ring = Servo(start + 5, "ring", conn, SCS0009, reverse)
+        self.little = Servo(start + 6, "little", conn, SCS0009, not reverse)
         self.servos = [
             self.thumb_rotation,
             self.thumb,
@@ -81,11 +84,10 @@ class Hand:
             servo.stop()
 
 
-right = Hand("right", conn)
-left = Hand("left", conn)
+print(conn.find_servos())
+left = Arm("left", conn)
 
-
-for hand in [right]:
+for hand in [left]:
 
     hand.start()
 
