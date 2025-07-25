@@ -3,7 +3,6 @@ import serial
 
 BROADCAST_ID = 0xFE  # 254
 MAX_ID = 0xFC  # 252
-SCS_END = 0
 
 # Instruction for DXL Protocol
 INST_PING = 1
@@ -324,7 +323,9 @@ class Connection(object):
         return self.writeTxRx(scs_id, address[0], address[1], data_write)
 
 
-# Macro for Control Table Value
+SCS_END = 0
+
+
 def SCS_SETEND(e):
     global SCS_END
     SCS_END = e
@@ -378,14 +379,6 @@ def SCS_HIBYTE(w):
         return (w >> 8) & 0xFF
     else:
         return w & 0xFF
-
-
-SCS_END = 0
-
-
-def SCS_SETEND(e):
-    global SCS_END
-    SCS_END = e
 
 
 class PortHandler(object):
@@ -485,4 +478,3 @@ class PortHandler(object):
             return baudrate
         else:
             raise Exception(f"Invalid baud rate {baudrate}")
-

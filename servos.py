@@ -1,5 +1,6 @@
 
 class STS3215:
+    BIG_ENDIAN = False
     FIRMWARE_MAJOR_VERSION = (0, 1)
     FIRMWARE_MINOR_VERSION = (1, 1)
     MODEL_NUMBER = (3, 2)
@@ -85,6 +86,7 @@ class STS3215:
 
 # http://doc.feetech.cn/#/prodinfodownload?srcType=FT-SCSCL-emanual-cbcc8ab2e3384282a01d4bf3
 class SCS0009:
+    BIG_ENDIAN = True
     # EPROM
     FIRMWARE_MAJOR_VERSION = (0, 1)
     FIRMWARE_MINOR_VERSION = (1, 1)

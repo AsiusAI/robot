@@ -4,7 +4,7 @@ import time
 
 servo = SCS0009()
 port = PortHandler("/dev/tty.usbmodem5A7A0572801")
-conn = Connection(0, port)
+conn = Connection(servo.BIG_ENDIAN, port)
 
 if not port.openPort():
     print("Failed to open the port")
