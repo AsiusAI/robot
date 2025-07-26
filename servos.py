@@ -1,6 +1,6 @@
 from servo import Port, ServoConnection
 
-
+# http://doc.feetech.cn/#/prodinfodownload?srcType=FT-SMS-STS-emanual-229f4476422d4059abfb1cb0
 class STS3215(ServoConnection):
     ENDIAN = False  # True for big endian and False for small
     NEUTRAL_POS = 2048

@@ -1,10 +1,11 @@
 import argparse
+import os
 import time
 from servo import COMM_SUCCESS, Port, ServoConnection
 from servos import SCS0009, STS3215
 
 parser = argparse.ArgumentParser(description="Move")
-parser.add_argument("port", type=str, nargs="?", help="Port")
+parser.add_argument("port", type=str, nargs="?", default=os.getenv("PORT"), help="Port")
 args = parser.parse_args()
 
 port = Port(args.port)
@@ -29,6 +30,12 @@ class Servo:
         pos = (self.max - relative) if self.reverse else (self.min + relative)
         self.conn.write(self.id, self.conn.GOAL_POSITION, int(pos))
 
+    def pos(self):
+        data, res, err = self.conn.read(self.id, self.conn.PRESENT_POSITION)
+        if res != COMM_SUCCESS:
+            raise Exception(f"Getting pos failed!")
+        return data
+
     def start(self):
         self.conn.write(self.id, self.conn.TORQUE_ENABLE, 1)
 
@@ -39,14 +46,13 @@ class Servo:
         return f"Servo(id={self.id}, name='{self.name}', type={self.type.__name__}, range=({self.min} → {self.max}), reverse={self.reverse})"
 
 
-class Arm:
+class Hand:
     def __init__(self, side, port: ServoConnection):
         self.side = side
         start = 30 if self.side == "right" else 40
 
         reverse = side == "right"
         scs = SCS0009(port)
-        sts = STS3215(port)
         self.thumb_rotation = Servo(start + 1, "thumb_rotation", scs, reverse)
         self.thumb = Servo(start + 2, "thumb", scs, reverse)
         self.index = Servo(start + 3, "index", scs, reverse)
@@ -71,18 +77,45 @@ class Arm:
             servo.stop()
 
 
-left = Arm("left", port)
+class Arm(Hand):
+    def __init__(self, side, port):
+        super().__init__(side, port)
+        sts = STS3215(port)
+        start = 10 if side == "right" else 20
+        reverse = side == "right"
+        self.shoulder_rot = Servo(start + 1, "shoulder_rot", sts, reverse)
+        self.shoulder = Servo(start + 2, "shoulder", sts, reverse)
+        self.upperarm_rot = Servo(start + 3, "upperarm_rot", sts, reverse)
+        self.elbow = Servo(start + 4, "elbow", sts, reverse)
+        self.forearm_rot = Servo(start + 5, "forearm_rot", sts, reverse)
+        self.hand_yaw = Servo(start + 6, "hand_yaw", sts, reverse)
+        self.hand_pitch = Servo(start + 7, "hand_pitch", sts, reverse)
+        self.servos = [
+            *self.servos,
+            self.shoulder_rot,
+            self.shoulder,
+            self.upperarm_rot,
+            self.elbow,
+            self.forearm_rot,
+            self.hand_yaw,
+            self.hand_pitch,
+        ]
+
+
+left = Hand("left", port)
 
 for hand in [left]:
 
     hand.start()
 
-    pos = 0
+    pos = 1
+
+    # print(arm.shoulder.pos(), arm.shoulder_rot.pos(), arm.shoulder_rot.min,arm.thumb.pos())
     hand.thumb_rotation.move(pos)
     hand.thumb.move(pos)
     hand.index.move(pos)
     hand.middle.move(pos)
     hand.ring.move(pos)
     hand.little.move(pos)
-    time.sleep(3)
+    time.sleep(5)
     hand.stop()
