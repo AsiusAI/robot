@@ -1,13 +1,14 @@
 import argparse
+import os
 import time
 from servo import COMM_SUCCESS, Port
 from servos import get_servo
 
 parser = argparse.ArgumentParser(description='Set servo IDs')
-parser.add_argument('port', type=str, nargs='?', help='Port')
-parser.add_argument('servo', type=str, nargs='?', help='Servo (SCS0009 or STS3215)')
-parser.add_argument('id', type=int, nargs='?', default=1, help='Current servo ID')
-parser.add_argument('new_id', type=int, nargs='?', help='New servo ID')
+parser.add_argument('--port', type=str, default=os.getenv("PORT"), help='Port')
+parser.add_argument('--servo', type=str, help='Servo (SCS0009 or STS3215)')
+parser.add_argument('--id', type=int, default=1, help='Current servo ID')
+parser.add_argument('--new-id', type=int, help='New servo ID')
 args = parser.parse_args()
 
 port = Port(args.port)
