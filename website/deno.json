@@ -1,0 +1,13 @@
+{
+  "tasks": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "imports": {
+    "@tailwindcss/vite": "npm:@tailwindcss/vite@^4.1.11",
+    "astro": "npm:astro@^5.12.7",
+    "tailwindcss": "npm:tailwindcss@^4.1.11"
+  }
+}
