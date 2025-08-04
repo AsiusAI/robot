@@ -33,9 +33,9 @@ INITIAL_ANGLE_MIN_MAX = 0.1
 GRAVITY = -9.81
 
 ANGLE_COEF = 1
-SPEED_COEF = 0.3
-DISTANCE_COEF = 0.3
-VELOCITY_COEF = 0.1
+SPEED_COEF = 0.2
+DISTANCE_COEF = 0.1
+VELOCITY_COEF = 0.05
 
 TERMINATION_REWARD = -10
 
@@ -46,7 +46,11 @@ class BalanceBotEnv:
     p.setAdditionalSearchPath(pybullet_data.getDataPath(), physicsClientId=self.client)
     p.setGravity(0, 0, GRAVITY, physicsClientId=self.client)
     p.loadURDF('plane.urdf', physicsClientId=self.client)
-    self.robot = None
+    self.robot = p.loadURDF(
+      'sim/balance/balance.urdf',
+      useFixedBase=False,
+      physicsClientId=self.client,
+    )
 
   def _get_obs(self) -> np.ndarray:
     _, orientation = p.getBasePositionAndOrientation(self.robot, physicsClientId=self.client)
@@ -55,22 +59,16 @@ class BalanceBotEnv:
     roll_velocity = angular_vel[0]
     return np.array([roll, roll_velocity], dtype=np.float32)
 
-  def reset(self) -> Tuple[np.ndarray, dict]:
+  def reset(self) -> np.ndarray:
     start_orientation = p.getQuaternionFromEuler([np.random.uniform(-INITIAL_ANGLE_MIN_MAX, INITIAL_ANGLE_MIN_MAX), 0, 0])
-    if self.robot is not None:
-      p.removeBody(self.robot)
-    self.robot = p.loadURDF(
-      'sim/balance/balance.urdf',
-      basePosition=[0, 0, 0],
-      baseOrientation=start_orientation,
-      useFixedBase=False,
-      physicsClientId=self.client,
-    )
+    p.resetBasePositionAndOrientation(self.robot, [0, 0, 0.17], start_orientation, physicsClientId=self.client)
+    p.resetJointState(self.robot, 0, targetValue=0, targetVelocity=0, physicsClientId=self.client)
+    p.resetJointState(self.robot, 1, targetValue=0, targetVelocity=0, physicsClientId=self.client)
     self.velocity = 0.0
     self.steps = 0
-    return self._get_obs(), {}
+    return self._get_obs()
 
-  def step(self, action: int) -> Tuple[np.ndarray, float, bool, bool, dict]:
+  def step(self, action: int) -> Tuple[np.ndarray, float, bool, bool]:
     if action == 0:
       self.velocity += VELOCITY_INCREMENT
     elif action == 1:
@@ -106,7 +104,7 @@ class BalanceBotEnv:
       reward = TERMINATION_REWARD
 
     truncated = self.steps >= MAX_STEPS
-    return obs, reward, terminated, truncated, {}
+    return obs, reward, terminated, truncated
 
   def close(self):
     p.disconnect(self.client)
@@ -160,13 +158,13 @@ if __name__ == '__main__':
   total_rewards_log = []
   for episode_number in (t := trange(EPISODES)):
     get_action.reset()
-    obs: np.ndarray = env.reset()[0]
+    obs = env.reset()
     rews, terminated, truncated = [], False, False
     while not terminated and not truncated:
       act = get_action(Tensor(obs)).item()
       Xn.append(np.copy(obs))
       An.append(act)
-      obs, rew, terminated, truncated, _ = env.step(act)
+      obs, rew, terminated, truncated = env.step(act)
       rews.append(float(rew))
     steps += len(rews)
     total_rewards_log.append(sum(rews))
