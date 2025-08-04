@@ -1,14 +1,17 @@
 import time
-from typing import Tuple, Optional
+from typing import Tuple
 
 import numpy as np
 import pybullet as p
 import pybullet_data
 
 from tinygrad import Tensor, TinyJit, nn
-from tinygrad.helpers import trange
+from tinygrad.helpers import trange, getenv
 
-EPISODES = 10_000
+
+GUI = True
+
+EPISODES = getenv('EPISODES', 100)
 BATCH_SIZE = 512
 REPLAY_BUFFER_SIZE = 10000
 LEARNING_RATE = 3e-4
@@ -17,25 +20,33 @@ TRAIN_STEPS = 10
 DISCOUNT_FACTOR = 0.99
 PPO_EPSILON = 0.15
 ENTROPY_SCALE = 0.005
-VELOCITY_INCREMENT = 2.0
+VELOCITY_INCREMENT = 1.0
 MAX_VELOCITY = 20
 MAX_STEPS = 20_000
 FALL_ANGLE_THRESHOLD = 0.6
 
-# --- PyBullet Simulation Environment ---
+
+OBSERVATION_SHAPE = (2,)
+ACTION_N = 2
+
+INITIAL_ANGLE_MIN_MAX = 0.1
+GRAVITY = -9.81
+
+ANGLE_COEF = 1
+SPEED_COEF = 0.3
+DISTANCE_COEF = 0.3
+VELOCITY_COEF = 0.1
+
+TERMINATION_REWARD = -10
 
 
 class BalanceBotEnv:
-  metadata = {'render_modes': ['human'], 'render_fps': 60}
-
-  def __init__(self, render_mode: Optional[str] = None):
-    self.render_mode = render_mode
-    self.client = p.connect(p.GUI if self.render_mode == 'human' else p.DIRECT)
+  def __init__(self):
+    self.client = p.connect(p.GUI if GUI else p.DIRECT)
     p.setAdditionalSearchPath(pybullet_data.getDataPath(), physicsClientId=self.client)
-
-    # Define observation and action space properties directly
-    self.observation_shape = (2,)
-    self.action_n = 2
+    p.setGravity(0, 0, GRAVITY, physicsClientId=self.client)
+    p.loadURDF('plane.urdf', physicsClientId=self.client)
+    self.robot = None
 
   def _get_obs(self) -> np.ndarray:
     _, orientation = p.getBasePositionAndOrientation(self.robot, physicsClientId=self.client)
@@ -44,24 +55,20 @@ class BalanceBotEnv:
     roll_velocity = angular_vel[0]
     return np.array([roll, roll_velocity], dtype=np.float32)
 
-  def _get_info(self) -> dict:
-    return {'velocity': self.velocity, 'steps': self.steps}
-
   def reset(self) -> Tuple[np.ndarray, dict]:
-    p.resetSimulation(physicsClientId=self.client)
-    p.setGravity(0, 0, -9.81, physicsClientId=self.client)
-    p.loadURDF('plane.urdf', physicsClientId=self.client)
-    start_orientation = p.getQuaternionFromEuler([np.random.uniform(-0.1, 0.1), 0, 0])
+    start_orientation = p.getQuaternionFromEuler([np.random.uniform(-INITIAL_ANGLE_MIN_MAX, INITIAL_ANGLE_MIN_MAX), 0, 0])
+    if self.robot is not None:
+      p.removeBody(self.robot)
     self.robot = p.loadURDF(
       'sim/balance/balance.urdf',
-      basePosition=[0, 0, 0.05],
+      basePosition=[0, 0, 0],
       baseOrientation=start_orientation,
       useFixedBase=False,
       physicsClientId=self.client,
     )
     self.velocity = 0.0
     self.steps = 0
-    return self._get_obs(), self._get_info()
+    return self._get_obs(), {}
 
   def step(self, action: int) -> Tuple[np.ndarray, float, bool, bool, dict]:
     if action == 0:
@@ -70,13 +77,10 @@ class BalanceBotEnv:
       self.velocity -= VELOCITY_INCREMENT
     self.velocity = np.clip(self.velocity, -MAX_VELOCITY, MAX_VELOCITY)
 
-    p.setJointMotorControl2(
-      self.robot, 0, p.VELOCITY_CONTROL, targetVelocity=self.velocity, force=10.0, physicsClientId=self.client
-    )
-    p.setJointMotorControl2(
-      self.robot, 1, p.VELOCITY_CONTROL, targetVelocity=-self.velocity, force=10.0, physicsClientId=self.client
-    )
+    p.setJointMotorControl2(self.robot, 0, p.VELOCITY_CONTROL, targetVelocity=self.velocity, force=10.0, physicsClientId=self.client)
+    p.setJointMotorControl2(self.robot, 1, p.VELOCITY_CONTROL, targetVelocity=-self.velocity, force=10.0, physicsClientId=self.client)
     p.stepSimulation(physicsClientId=self.client)
+
     self.steps += 1
     obs = self._get_obs()
     pos, _ = p.getBasePositionAndOrientation(self.robot, physicsClientId=self.client)
@@ -87,18 +91,19 @@ class BalanceBotEnv:
 
     if not terminated:
       angle_penalty = abs(roll) / FALL_ANGLE_THRESHOLD
+      speed_penalty = (linear_vel[0] ** 2 + linear_vel[1] ** 2) ** 0.5
+      distance_penalty = (pos[0] ** 2 + pos[1] ** 2) ** 0.5
+      motor_velocity_penalty = abs(self.velocity) / MAX_VELOCITY
 
-      horizontal_speed = (linear_vel[0] ** 2 + linear_vel[1] ** 2) ** 0.5
-      speed_penalty = 0.2 * horizontal_speed
-
-      horizontal_distance = (pos[0] ** 2 + pos[1] ** 2) ** 0.5
-      distance_penalty = 0.1 * horizontal_distance
-
-      motor_velocity_penalty = 0.05 * (abs(self.velocity) / MAX_VELOCITY)
-
-      reward = 1 - angle_penalty - speed_penalty - distance_penalty - motor_velocity_penalty
+      reward = (
+        1
+        - ANGLE_COEF * angle_penalty
+        - SPEED_COEF * speed_penalty
+        - DISTANCE_COEF * distance_penalty
+        - VELOCITY_COEF * motor_velocity_penalty
+      )
     else:
-      reward = -10.0
+      reward = TERMINATION_REWARD
 
     truncated = self.steps >= MAX_STEPS
     return obs, reward, terminated, truncated, {}
@@ -107,7 +112,6 @@ class BalanceBotEnv:
     p.disconnect(self.client)
 
 
-# --- Tinygrad Actor-Critic Model and Training (No changes needed here) ---
 class ActorCritic:
   def __init__(self, in_features, out_features, hidden_state=HIDDEN_UNITS):
     self.l1 = nn.Linear(in_features, hidden_state)
@@ -123,19 +127,16 @@ class ActorCritic:
 
 
 if __name__ == '__main__':
-  env = BalanceBotEnv("human")
-  model = ActorCritic(env.observation_shape[0], env.action_n)
+  env = BalanceBotEnv()
+  model = ActorCritic(OBSERVATION_SHAPE[0], ACTION_N)
   opt = nn.optim.Adam(nn.state.get_parameters(model), lr=LEARNING_RATE)
 
   @TinyJit
-  def train_step(
-    x: Tensor, selected_action: Tensor, reward: Tensor, old_log_dist: Tensor
-  ) -> Tuple[Tensor, Tensor, Tensor]:
+  def train_step(x: Tensor, selected_action: Tensor, reward: Tensor, old_log_dist: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
     with Tensor.train():
       log_dist, value = model(x)
       action_mask = (
-        selected_action.reshape(-1, 1)
-        == Tensor.arange(log_dist.shape[1]).reshape(1, -1).expand(selected_action.shape[0], -1)
+        selected_action.reshape(-1, 1) == Tensor.arange(log_dist.shape[1]).reshape(1, -1).expand(selected_action.shape[0], -1)
       ).float()
       advantage = reward.reshape(-1, 1) - value
       masked_advantage = action_mask * advantage.detach()
