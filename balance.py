@@ -1,73 +1,188 @@
-import argparse
+import time
+from typing import Tuple, Optional
+
+import numpy as np
 import pybullet as p
 import pybullet_data
-import numpy as np
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--direct', action='store_true', help='Disable GUI mode')
-args = parser.parse_args()
+from tinygrad import Tensor, TinyJit, nn
+from tinygrad.helpers import trange
 
-LEFT_WHEEL_ID = 0
-RIGHT_WHEEL_ID = 1
-MAX_STEPS = 500
+EPISODES = 10_000
+BATCH_SIZE = 512
+REPLAY_BUFFER_SIZE = 10000
+LEARNING_RATE = 3e-4
+HIDDEN_UNITS = 64
+TRAIN_STEPS = 10
+DISCOUNT_FACTOR = 0.99
+PPO_EPSILON = 0.15
+ENTROPY_SCALE = 0.005
+VELOCITY_INCREMENT = 2.0
+MAX_VELOCITY = 20
+MAX_STEPS = 20_000
+FALL_ANGLE_THRESHOLD = 0.6
 
-p.connect(p.DIRECT if args.direct else p.GUI)
-p.setAdditionalSearchPath(pybullet_data.getDataPath())
-
-
-robot = None
-velocity = 0.0
-steps = 0
-reward = 0.0
-times = 0
-
-
-def reset():
-  global robot, velocity, steps, reward, times
-  velocity = 0.0
-  steps = 0
-  reward = 0
-  times += 1
-
-  p.resetSimulation()
-  p.setGravity(0, 0, -9.81)
-  p.loadURDF('plane.urdf')
-
-  robot = p.loadURDF(
-    'sim/balance/balance.urdf',
-    basePosition=[0.0, 0.0, 0.05],
-    baseOrientation=p.getQuaternionFromEuler([np.random.uniform(-0.2, 0.2), 0, 0]),
-    useFixedBase=False,
-  )
+# --- PyBullet Simulation Environment ---
 
 
-reset()
+class BalanceBotEnv:
+  metadata = {'render_modes': ['human'], 'render_fps': 60}
 
-while True:
-  p.stepSimulation()
+  def __init__(self, render_mode: Optional[str] = None):
+    self.render_mode = render_mode
+    self.client = p.connect(p.GUI if self.render_mode == 'human' else p.DIRECT)
+    p.setAdditionalSearchPath(pybullet_data.getDataPath(), physicsClientId=self.client)
 
-  p.setJointMotorControl2(robot, LEFT_WHEEL_ID, p.VELOCITY_CONTROL, targetVelocity=velocity, force=10.0)
-  p.setJointMotorControl2(robot, RIGHT_WHEEL_ID, p.VELOCITY_CONTROL, targetVelocity=-velocity, force=10.0)
+    # Define observation and action space properties directly
+    self.observation_shape = (2,)
+    self.action_n = 2
 
-  if steps >= MAX_STEPS:
-    reset()
+  def _get_obs(self) -> np.ndarray:
+    _, orientation = p.getBasePositionAndOrientation(self.robot, physicsClientId=self.client)
+    roll, _, _ = p.getEulerFromQuaternion(orientation)
+    _, angular_vel = p.getBaseVelocity(self.robot, physicsClientId=self.client)
+    roll_velocity = angular_vel[0]
+    return np.array([roll, roll_velocity], dtype=np.float32)
 
-  _, orientation = p.getBasePositionAndOrientation(robot)
-  roll, pitch, yaw = p.getEulerFromQuaternion(orientation)
+  def _get_info(self) -> dict:
+    return {'velocity': self.velocity, 'steps': self.steps}
 
-  if abs(roll) > 0.5 or abs(pitch) > 0.5:
-    reset()
+  def reset(self) -> Tuple[np.ndarray, dict]:
+    p.resetSimulation(physicsClientId=self.client)
+    p.setGravity(0, 0, -9.81, physicsClientId=self.client)
+    p.loadURDF('plane.urdf', physicsClientId=self.client)
+    start_orientation = p.getQuaternionFromEuler([np.random.uniform(-0.1, 0.1), 0, 0])
+    self.robot = p.loadURDF(
+      'sim/balance/balance.urdf',
+      basePosition=[0, 0, 0.05],
+      baseOrientation=start_orientation,
+      useFixedBase=False,
+      physicsClientId=self.client,
+    )
+    self.velocity = 0.0
+    self.steps = 0
+    return self._get_obs(), self._get_info()
 
-  if steps % 100 == 0:
-    data = {
-      'times': times,
-      'frame': steps,
-      'reward': reward,
-      'roll': roll,
-      'pitch': pitch,
-      'yaw': yaw,
-      'velocity': velocity,
-    }
-    print('\n' + '\n'.join(f'{k:<10} = {v: .5f}' for k, v in data.items()) + '\n')
+  def step(self, action: int) -> Tuple[np.ndarray, float, bool, bool, dict]:
+    if action == 0:
+      self.velocity += VELOCITY_INCREMENT
+    elif action == 1:
+      self.velocity -= VELOCITY_INCREMENT
+    self.velocity = np.clip(self.velocity, -MAX_VELOCITY, MAX_VELOCITY)
 
-  steps += 1
+    p.setJointMotorControl2(
+      self.robot, 0, p.VELOCITY_CONTROL, targetVelocity=self.velocity, force=10.0, physicsClientId=self.client
+    )
+    p.setJointMotorControl2(
+      self.robot, 1, p.VELOCITY_CONTROL, targetVelocity=-self.velocity, force=10.0, physicsClientId=self.client
+    )
+    p.stepSimulation(physicsClientId=self.client)
+    self.steps += 1
+    obs = self._get_obs()
+    pos, _ = p.getBasePositionAndOrientation(self.robot, physicsClientId=self.client)
+    linear_vel, _ = p.getBaseVelocity(self.robot, physicsClientId=self.client)
+
+    roll = obs[0]
+    terminated = abs(roll) > FALL_ANGLE_THRESHOLD
+
+    if not terminated:
+      angle_penalty = abs(roll) / FALL_ANGLE_THRESHOLD
+
+      horizontal_speed = (linear_vel[0] ** 2 + linear_vel[1] ** 2) ** 0.5
+      speed_penalty = 0.2 * horizontal_speed
+
+      horizontal_distance = (pos[0] ** 2 + pos[1] ** 2) ** 0.5
+      distance_penalty = 0.1 * horizontal_distance
+
+      motor_velocity_penalty = 0.05 * (abs(self.velocity) / MAX_VELOCITY)
+
+      reward = 1 - angle_penalty - speed_penalty - distance_penalty - motor_velocity_penalty
+    else:
+      reward = -10.0
+
+    truncated = self.steps >= MAX_STEPS
+    return obs, reward, terminated, truncated, {}
+
+  def close(self):
+    p.disconnect(self.client)
+
+
+# --- Tinygrad Actor-Critic Model and Training (No changes needed here) ---
+class ActorCritic:
+  def __init__(self, in_features, out_features, hidden_state=HIDDEN_UNITS):
+    self.l1 = nn.Linear(in_features, hidden_state)
+    self.l2 = nn.Linear(hidden_state, out_features)
+    self.c1 = nn.Linear(in_features, hidden_state)
+    self.c2 = nn.Linear(hidden_state, 1)
+
+  def __call__(self, obs: Tensor) -> Tuple[Tensor, Tensor]:
+    x = self.l1(obs).tanh()
+    act = self.l2(x).log_softmax()
+    x = self.c1(obs).relu()
+    return act, self.c2(x)
+
+
+if __name__ == '__main__':
+  env = BalanceBotEnv("human")
+  model = ActorCritic(env.observation_shape[0], env.action_n)
+  opt = nn.optim.Adam(nn.state.get_parameters(model), lr=LEARNING_RATE)
+
+  @TinyJit
+  def train_step(
+    x: Tensor, selected_action: Tensor, reward: Tensor, old_log_dist: Tensor
+  ) -> Tuple[Tensor, Tensor, Tensor]:
+    with Tensor.train():
+      log_dist, value = model(x)
+      action_mask = (
+        selected_action.reshape(-1, 1)
+        == Tensor.arange(log_dist.shape[1]).reshape(1, -1).expand(selected_action.shape[0], -1)
+      ).float()
+      advantage = reward.reshape(-1, 1) - value
+      masked_advantage = action_mask * advantage.detach()
+      ratios = (log_dist - old_log_dist).exp()
+      unclipped_ratio = masked_advantage * ratios
+      clipped_ratio = masked_advantage * ratios.clip(1 - PPO_EPSILON, 1 + PPO_EPSILON)
+      action_loss = -unclipped_ratio.minimum(clipped_ratio).sum(-1).mean()
+      entropy_loss = (log_dist.exp() * log_dist).sum(-1).mean()
+      critic_loss = advantage.square().mean()
+      opt.zero_grad()
+      (action_loss + entropy_loss * ENTROPY_SCALE + critic_loss).backward()
+      opt.step()
+      return action_loss.realize(), entropy_loss.realize(), critic_loss.realize()
+
+  @TinyJit
+  def get_action(obs: Tensor) -> Tensor:
+    return (model(obs)[0] - Tensor.rand(*model(obs)[0].shape).log().neg().log().neg()).argmax().realize()
+
+  st, steps = time.perf_counter(), 0
+  Xn, An, Rn = [], [], []
+  total_rewards_log = []
+  for episode_number in (t := trange(EPISODES)):
+    get_action.reset()
+    obs: np.ndarray = env.reset()[0]
+    rews, terminated, truncated = [], False, False
+    while not terminated and not truncated:
+      act = get_action(Tensor(obs)).item()
+      Xn.append(np.copy(obs))
+      An.append(act)
+      obs, rew, terminated, truncated, _ = env.step(act)
+      rews.append(float(rew))
+    steps += len(rews)
+    total_rewards_log.append(sum(rews))
+
+    discounts = np.power(DISCOUNT_FACTOR, np.arange(len(rews)))
+    Rn += [np.sum(rews[i:] * discounts[: len(rews) - i]) for i in range(len(rews))]
+    Xn, An, Rn = Xn[-REPLAY_BUFFER_SIZE:], An[-REPLAY_BUFFER_SIZE:], Rn[-REPLAY_BUFFER_SIZE:]
+    if len(Xn) < BATCH_SIZE:
+      continue  # Don't train until we have enough data
+
+    X, A, R = Tensor(Xn), Tensor(An), Tensor(Rn)
+
+    old_log_dist = model(X)[0].detach()
+    for i in range(TRAIN_STEPS):
+      samples = Tensor.randint(BATCH_SIZE, high=X.shape[0]).realize()
+      action_loss, entropy_loss, critic_loss = train_step(X[samples], A[samples], R[samples], old_log_dist[samples])
+    avg_rew = sum(total_rewards_log[-20:]) / len(total_rewards_log[-20:])
+    t.set_description(f'sz:{len(Xn):5d} avg_rew(20):{avg_rew:8.2f} last_rew:{sum(rews):8.2f}')
+
+  env.close()
