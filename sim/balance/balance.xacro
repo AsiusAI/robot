@@ -1,0 +1,111 @@
+<?xml version="1.0" ?>
+<robot name="balance" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+<xacro:include filename="materials.xacro" />
+<xacro:include filename="balance.trans" />
+<xacro:include filename="balance.gazebo" />
+<link name="base_link">
+  <inertial>
+    <origin xyz="-3.298439565456548e-17 0.0 0.15518382600667469" rpy="0 0 0"/>
+    <mass value="1.1691157163837433"/>
+    <inertia ixx="0.099393" iyy="0.113338" izz="0.017848" ixy="-0.0" iyz="0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="right_wheel_1">
+  <inertial>
+    <origin xyz="-0.025000000000000022 -3.695863830910979e-17 1.0408340855860843e-17" rpy="0 0 0"/>
+    <mass value="0.9154342382147101"/>
+    <inertia ixx="0.002874" iyy="0.001621" izz="0.001621" ixy="-0.0" iyz="0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.195 -0.0 -0.019" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/right_wheel_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.195 -0.0 -0.019" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/right_wheel_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="left_wheel_1">
+  <inertial>
+    <origin xyz="0.025000000000000022 -2.7718978731832345e-17 1.0408340855860843e-17" rpy="0 0 0"/>
+    <mass value="0.9154342382147101"/>
+    <inertia ixx="0.002874" iyy="0.001621" izz="0.001621" ixy="-0.0" iyz="0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.195 -0.0 -0.019" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/left_wheel_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.195 -0.0 -0.019" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/left_wheel_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="balance_wheel_1">
+  <inertial>
+    <origin xyz="8.315693619549702e-17 -2.7718978731832345e-17 0.025000000000000133" rpy="0 0 0"/>
+    <mass value="0.9154342382147101"/>
+    <inertia ixx="0.001621" iyy="0.001621" izz="0.002874" ixy="0.0" iyz="-0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.0 -0.0 -1.088" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/balance_wheel_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.0 -0.0 -1.088" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/balance_wheel_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<joint name="Revolute 1" type="continuous">
+  <origin xyz="-0.195 0.0 0.019" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="right_wheel_1"/>
+  <axis xyz="-1.0 0.0 0.0"/>
+</joint>
+
+<joint name="Revolute 2" type="continuous">
+  <origin xyz="0.195 0.0 0.019" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="left_wheel_1"/>
+  <axis xyz="1.0 0.0 0.0"/>
+</joint>
+
+<joint name="Rigid 3" type="fixed">
+  <origin xyz="0.0 0.0 1.088" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="balance_wheel_1"/>
+</joint>
+
+</robot>
