@@ -13,32 +13,27 @@ GUI = True
 
 EPISODES = getenv('EPISODES', 100)
 BATCH_SIZE = 512
-REPLAY_BUFFER_SIZE = 10000
-LEARNING_RATE = 3e-4
+LEARNING_RATE = 3e-3
 HIDDEN_UNITS = 64
 TRAIN_STEPS = 10
 DISCOUNT_FACTOR = 0.99
 PPO_EPSILON = 0.15
-ENTROPY_SCALE = 0.005
-VELOCITY_INCREMENT = 1.0
+ENTROPY_SCALE = 0.001
+VELOCITY_INCREMENT = 2.0
 MAX_VELOCITY = 20
 MAX_STEPS = 20_000
 FALL_ANGLE_THRESHOLD = 0.6
 
 
-OBSERVATION_SHAPE = (2,)
+OBSERVATION_SHAPE = (4,)
 ACTION_N = 2
 
-INITIAL_ANGLE_MIN_MAX = 0.1
+INITIAL_ANGLE_MIN_MAX = 0.05
 GRAVITY = -9.81
 
-ANGLE_COEF = 1
-SPEED_COEF = 0.2
-DISTANCE_COEF = 0.1
-VELOCITY_COEF = 0.05
-
 TERMINATION_REWARD = -10
-
+SAFE_RADIUS = 0.5  # Agent is not penalized for being within 0.5 meters of the origin
+DISTANCE_PENALTY_COEF = 0.1
 
 class BalanceBotEnv:
   def __init__(self):
@@ -53,11 +48,11 @@ class BalanceBotEnv:
     )
 
   def _get_obs(self) -> np.ndarray:
-    _, orientation = p.getBasePositionAndOrientation(self.robot, physicsClientId=self.client)
+    pos, orientation = p.getBasePositionAndOrientation(self.robot, physicsClientId=self.client)
     roll, _, _ = p.getEulerFromQuaternion(orientation)
     _, angular_vel = p.getBaseVelocity(self.robot, physicsClientId=self.client)
     roll_velocity = angular_vel[0]
-    return np.array([roll, roll_velocity], dtype=np.float32)
+    return np.array([roll, roll_velocity, pos[0], self.velocity], dtype=np.float32)
 
   def reset(self) -> np.ndarray:
     start_orientation = p.getQuaternionFromEuler([np.random.uniform(-INITIAL_ANGLE_MIN_MAX, INITIAL_ANGLE_MIN_MAX), 0, 0])
@@ -88,18 +83,11 @@ class BalanceBotEnv:
     terminated = abs(roll) > FALL_ANGLE_THRESHOLD
 
     if not terminated:
-      angle_penalty = abs(roll) / FALL_ANGLE_THRESHOLD
-      speed_penalty = (linear_vel[0] ** 2 + linear_vel[1] ** 2) ** 0.5
-      distance_penalty = (pos[0] ** 2 + pos[1] ** 2) ** 0.5
-      motor_velocity_penalty = abs(self.velocity) / MAX_VELOCITY
+      reward = 1.0 - (abs(roll) / FALL_ANGLE_THRESHOLD)
 
-      reward = (
-        1
-        - ANGLE_COEF * angle_penalty
-        - SPEED_COEF * speed_penalty
-        - DISTANCE_COEF * distance_penalty
-        - VELOCITY_COEF * motor_velocity_penalty
-      )
+      distance_from_origin = (pos[0]**2 + pos[1]**2)**0.5
+      if distance_from_origin > SAFE_RADIUS:
+        reward -= DISTANCE_PENALTY_COEF * (distance_from_origin - SAFE_RADIUS)
     else:
       reward = TERMINATION_REWARD
 
@@ -171,7 +159,6 @@ if __name__ == '__main__':
 
     discounts = np.power(DISCOUNT_FACTOR, np.arange(len(rews)))
     Rn += [np.sum(rews[i:] * discounts[: len(rews) - i]) for i in range(len(rews))]
-    Xn, An, Rn = Xn[-REPLAY_BUFFER_SIZE:], An[-REPLAY_BUFFER_SIZE:], Rn[-REPLAY_BUFFER_SIZE:]
     if len(Xn) < BATCH_SIZE:
       continue  # Don't train until we have enough data
 
@@ -179,9 +166,10 @@ if __name__ == '__main__':
 
     old_log_dist = model(X)[0].detach()
     for i in range(TRAIN_STEPS):
-      samples = Tensor.randint(BATCH_SIZE, high=X.shape[0]).realize()
+      samples = Tensor(np.random.choice(X.shape[0], size=BATCH_SIZE, replace=False))
       action_loss, entropy_loss, critic_loss = train_step(X[samples], A[samples], R[samples], old_log_dist[samples])
     avg_rew = sum(total_rewards_log[-20:]) / len(total_rewards_log[-20:])
     t.set_description(f'sz:{len(Xn):5d} avg_rew(20):{avg_rew:8.2f} last_rew:{sum(rews):8.2f}')
+    Xn, An, Rn = [], [], []
 
   env.close()
